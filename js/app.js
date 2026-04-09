@@ -16,7 +16,6 @@ function calculateSummary(members) {
 
     members.forEach(m => {
         totalBalance += parseFloat(m.balance || 0);
-        // เปลี่ยนเงื่อนไขนับสถานะ
         if (m.status === 'ผ่านเกณฑ์') activeCount++;
         else inactiveCount++;
     });
@@ -80,11 +79,11 @@ function displayMembers() {
 
     let htmlString = '';
     displayData.forEach(data => {
-        // เปลี่ยนการตั้งค่าสีตามสถานะใหม่
         const statusColor = data.status === 'ผ่านเกณฑ์' ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
         const zoneText = data.zone ? `(เขต ${data.zone})` : '';
         const commText = data.community || '-';
 
+        // 💡 อัปเดตตารางสรุปในหน้า User ให้เป็น 4 ช่อง (เพิ่มค่าขายขยะ)
         htmlString += `
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative">
                 <div class="flex justify-between items-start mb-3">
@@ -100,10 +99,23 @@ function displayMembers() {
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-3 gap-2 text-center text-xs bg-gray-50 p-2 rounded-lg">
-                    <div><p class="text-gray-500 mb-1">ฝากเงิน</p><p class="text-green-600 font-bold">฿${parseFloat(data.deposit || 0).toLocaleString()}</p></div>
-                    <div class="border-l border-r border-gray-200"><p class="text-gray-500 mb-1">ถอนเงิน</p><p class="text-red-500 font-bold">฿${parseFloat(data.withdraw || 0).toLocaleString()}</p></div>
-                    <div><p class="text-gray-500 mb-1">หักฌาปนกิจ</p><p class="text-orange-500 font-bold">฿${parseFloat(data.deduction || 0).toLocaleString()}</p></div>
+                <div class="grid grid-cols-4 gap-1 text-center text-[10px] sm:text-xs bg-gray-50 p-2 rounded-lg">
+                    <div>
+                        <p class="text-gray-500 mb-1">ฝากเงิน</p>
+                        <p class="text-green-600 font-bold">฿${parseFloat(data.deposit || 0).toLocaleString()}</p>
+                    </div>
+                    <div class="border-l border-gray-200">
+                        <p class="text-gray-500 mb-1">ขายขยะ</p>
+                        <p class="text-indigo-600 font-bold">฿${parseFloat(data.trashIncome || 0).toLocaleString()}</p>
+                    </div>
+                    <div class="border-l border-gray-200">
+                        <p class="text-gray-500 mb-1">ถอนเงิน</p>
+                        <p class="text-red-500 font-bold">฿${parseFloat(data.withdraw || 0).toLocaleString()}</p>
+                    </div>
+                    <div class="border-l border-gray-200">
+                        <p class="text-gray-500 mb-1">หักฌาปนกิจ</p>
+                        <p class="text-orange-500 font-bold">฿${parseFloat(data.deduction || 0).toLocaleString()}</p>
+                    </div>
                 </div>
             </div>
         `;
