@@ -1,19 +1,35 @@
 import { db } from "./firebase-config.js";
-import { collection, getDocs, setDoc, doc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 const memberListEl = document.getElementById('memberList');
 const searchInput = document.getElementById('searchInput');
-const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQuyaHe7Cr6aikyZOqePNgtMbCzmD_HqgIf7C3bqkDf_4IkHO7yOq6kwvUm3u79q9JBcJob-XIHc2Yl/pub?gid=270111375&single=true&output=csv';
 
 let allMembers = [];
+
+// คำนวณภาพรวม Dashboard
+function calculateSummary(members) {
+    let totalBalance = 0;
+    let activeCount = 0;
+    let inactiveCount = 0;
+
+    members.forEach(m => {
+        totalBalance += parseFloat(m.balance || 0);
+        if (m.status === 'ปกติ') activeCount++;
+        else inactiveCount++;
+    });
+
+    document.getElementById('summaryTotalBalance').innerText = '฿' + totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('summaryTotalMembers').innerText = members.length.toLocaleString();
+    document.getElementById('summaryActive').innerText = activeCount.toLocaleString();
+    document.getElementById('summaryInactive').innerText = inactiveCount.toLocaleString();
+}
 
 async function loadMembers() {
     try {
         const querySnapshot = await getDocs(collection(db, "members"));
         
         if(querySnapshot.empty) {
-            memberListEl.innerHTML = '<div class="text-center text-red-500 bg-red-50 p-4 rounded-xl">ไม่พบข้อมูลในระบบ<br>โปรดกดดึงข้อมูลตั้งต้น</div>';
-            document.getElementById('importDataBtn').classList.remove('hidden');
+            memberListEl.innerHTML = '<div class="text-center text-red-500 bg-red-50 p-4 rounded-xl">ไม่พบข้อมูลในระบบ</div>';
             return;
         }
 
@@ -22,6 +38,7 @@ async function loadMembers() {
             allMembers.push({ id: docSnap.id, ...docSnap.data() });
         });
         
+        calculateSummary(allMembers);
         displayMembers(allMembers);
 
     } catch (error) {
@@ -86,41 +103,6 @@ searchInput.addEventListener('input', (e) => {
         (m.community && m.community.toLowerCase().includes(term))
     );
     displayMembers(filtered);
-});
-
-document.getElementById('importDataBtn').addEventListener('click', () => {
-    document.getElementById('importDataBtn').innerText = 'กำลังดึงข้อมูล...';
-    Papa.parse(csvUrl, {
-        download: true,
-        header: true,
-        complete: async function(results) {
-            const data = results.data;
-            let count = 0;
-            for(let row of data) {
-                const name = row['ชื่อ สกุล'] || row['ชื่อ-สกุล'] || row['ชื่อ-นามสกุล'];
-                if(!name) continue; 
-                
-                const memberData = {
-                    memberId: row['เลขสมาชิก'] || row['รหัสสมาชิก'] || String(Date.now() + count),
-                    name: name,
-                    zone: row['เขต'] || '',
-                    community: row['ชุมชน'] || row['ชื่อชุมชน'] || '',
-                    joinDate: row['วันที่สมัคร'] || '',
-                    deposit: parseFloat(row['เงินฝาก'] || 0),
-                    withdraw: parseFloat(row['ถอนเงิน'] || 0),
-                    deduction: parseFloat(row['หักฌาปนกิจ'] || 0),
-                    balance: parseFloat(row['ยอดเงินคงเหลือ'] || 0),
-                    status: row['สถานะสมาชิก'] || row['สถานะ'] || 'ปกติ'
-                };
-
-                await setDoc(doc(db, "members", memberData.memberId), memberData);
-                count++;
-            }
-            alert(`อัพโหลดเข้า Firebase สำเร็จ ${count} รายการ!`);
-            document.getElementById('importDataBtn').classList.add('hidden');
-            loadMembers();
-        }
-    });
 });
 
 loadMembers();
