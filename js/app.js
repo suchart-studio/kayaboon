@@ -4,7 +4,7 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.11.0/
 const memberListEl = document.getElementById('memberList');
 const searchInput = document.getElementById('searchInput');
 
-// 💡 ตัวแปรสำหรับ Pagination ฝั่ง User
+// ตัวแปรสำหรับ Pagination ฝั่ง User
 let allMembers = [];
 let filteredMembers = [];
 let currentPage = 1;
@@ -42,11 +42,11 @@ async function loadMembers() {
             allMembers.push({ id: docSnap.id, ...docSnap.data() });
         });
         
+        // คำนวณสรุปยอด Dashboard จากข้อมูลทั้งหมด
         calculateSummary(allMembers);
         
-        filteredMembers = [...allMembers];
-        currentPage = 1;
-        displayMembers();
+        // 💡 เริ่มต้น: ยังไม่ต้องแสดงตาราง ให้โชว์ข้อความให้ค้นหาแทน
+        showSearchPrompt();
 
     } catch (error) {
         console.error("Error loading documents: ", error);
@@ -54,13 +54,25 @@ async function loadMembers() {
     }
 }
 
-// 💡 แสดงผลแบบคำนวณหน้า
+// 💡 ฟังก์ชันแสดงข้อความให้เริ่มค้นหา
+function showSearchPrompt() {
+    memberListEl.innerHTML = `
+        <div class="text-center text-gray-500 py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+            <span class="text-3xl">👆</span>
+            <p class="mt-3 text-sm">โปรดพิมพ์ <b>ชื่อ, เลขสมาชิก</b> หรือ <b>ชุมชน</b></p>
+            <p class="text-sm">ในช่องค้นหาด้านบนเพื่อดูข้อมูลสมาชิก</p>
+        </div>`;
+    document.getElementById('userPaginationControls').classList.add('hidden');
+}
+
+// แสดงผลเมื่อมีการค้นหา
 function displayMembers() {
     memberListEl.innerHTML = '';
     const totalItems = filteredMembers.length;
 
+    // ถ้าหาไม่เจอ
     if (totalItems === 0) {
-        memberListEl.innerHTML = '<div class="text-center text-gray-500 py-10">ไม่พบสมาชิกที่ค้นหา</div>';
+        memberListEl.innerHTML = '<div class="text-center text-gray-500 py-10 bg-white rounded-2xl shadow-sm border border-gray-100">ไม่พบข้อมูลสมาชิกที่ค้นหา</div>';
         document.getElementById('userPaginationControls').classList.add('hidden');
         return;
     }
@@ -104,16 +116,21 @@ function displayMembers() {
 
     memberListEl.innerHTML = htmlString;
     
-    document.getElementById('userPaginationControls').classList.remove('hidden');
-    document.getElementById('userPageInfo').innerText = `${currentPage} / ${totalPages}`;
+    // ถ้ามีข้อมูลมากกว่า 1 หน้า ให้แสดงปุ่มแบ่งหน้า
+    if (totalPages > 1) {
+        document.getElementById('userPaginationControls').classList.remove('hidden');
+        document.getElementById('userPageInfo').innerText = `${currentPage} / ${totalPages}`;
+    } else {
+        document.getElementById('userPaginationControls').classList.add('hidden');
+    }
 }
 
-// 💡 ฟังก์ชันเปลี่ยนหน้าสำหรับฝั่ง User
+// ฟังก์ชันเปลี่ยนหน้าสำหรับฝั่ง User
 window.prevUserPage = () => {
     if (currentPage > 1) {
         currentPage--;
         displayMembers();
-        window.scrollTo({ top: 250, behavior: 'smooth' }); // เลื่อนจอกลับไปข้างบนตารางนิดหน่อย
+        window.scrollTo({ top: 250, behavior: 'smooth' }); // เลื่อนจอกลับไปข้างบนตาราง
     }
 };
 
@@ -126,20 +143,26 @@ window.nextUserPage = () => {
     }
 };
 
+// 💡 ดักจับการพิมพ์ค้นหา
 searchInput.addEventListener('input', (e) => {
     const term = e.target.value.trim().toLowerCase();
     
+    // ถ้าช่องค้นหาถูกลบจนว่างเปล่า ให้ซ่อนรายชื่อแล้วแสดงข้อความให้ค้นหาใหม่
     if (term === '') {
-        filteredMembers = [...allMembers];
-    } else {
-        filteredMembers = allMembers.filter(m => 
-            (m.name && m.name.toLowerCase().includes(term)) || 
-            (m.memberId && m.memberId.toLowerCase().includes(term)) ||
-            (m.community && m.community.toLowerCase().includes(term))
-        );
+        filteredMembers = [];
+        showSearchPrompt();
+        return;
     }
+
+    filteredMembers = allMembers.filter(m => 
+        (m.name && m.name.toLowerCase().includes(term)) || 
+        (m.memberId && m.memberId.toLowerCase().includes(term)) ||
+        (m.community && m.community.toLowerCase().includes(term))
+    );
+    
     currentPage = 1;
     displayMembers();
 });
 
+// เริ่มโหลดข้อมูล
 loadMembers();
