@@ -6,9 +6,6 @@ const memberModal = document.getElementById('memberModal');
 const memberForm = document.getElementById('memberForm');
 let allMembers = [];
 
-// ----------------------------------------------------
-// ข้อมูล เขต และ ชุมชน (นำเข้าจากไฟล์ CSV)
-// ----------------------------------------------------
 const communityData = {
     "1": ["โนนชัย 1", "โนนชัย 2", "โนนชัย 3", "ดอนหญ้านาง 1", "ดอนหญ้านาง 2", "ดอนหญ้านาง 3", "หลังศูนย์ราชการ 1", "หลังศูนย์ราชการ 2", "เทพารักษ์ 1", "เทพารักษ์ 2", "เทพารักษ์ 3", "เทพารักษ์ 4", "เทพารักษ์ 5", "พัฒนาเทพารักษ์", "เจ้าพ่อเกษม", "เจ้าพ่อทองสุข", "บขส"],
     "2": ["หนองใหญ่ 1", "หนองใหญ่ 2", "หนองใหญ่ 3", "หนองใหญ่ 4", "บะขาม", "ศรีจันทร์ประชา", "นาคะประเวศน์", "คุ้มพระลับ", "ชัยณรงค์สามัคคี", "ธารทิพย์", "หน้า รพ.ศูนย์ฯ", "หลักเมือง", "บ้านเลขที่ 37", "ทุ่งเศรษฐี", "ศิริมงคล", "ศรีจันทร์พัฒนา", "มิตรสัมพันธ์1", "มิตรสัมพันธ์2", "ทุ่งสร้างพัฒนา", "โพธิบัลลังค์ทอง", "บ้านพัก ตชด", "หัวสะพานสัมพันธ์", "ชลประทาน", "เจ้าพ่อขุนภักดี", "ธนาคร", "คุ้มหนองคู", "ศรีจันทร์", "ตรีเทพนครขอนแก่น"],
@@ -18,7 +15,6 @@ const communityData = {
 
 const communitySelect = document.getElementById('memberCommunity');
 
-// ฟังก์ชันบังคับโหลดชุมชน ทำงานเมื่อคลิกเลือกเขต
 window.handleZoneChange = () => {
     const zoneValue = document.getElementById('memberZone').value;
     populateCommunities(zoneValue);
@@ -37,8 +33,64 @@ function populateCommunities(zoneValue, selectedCommunity = "") {
 }
 
 // ----------------------------------------------------
-// ระบบ Auto-Calculate ยอดเงินคงเหลือ
+// ระบบนำเข้าข้อมูลผ่านไฟล์ Excel (.xlsx / .csv)
 // ----------------------------------------------------
+document.getElementById('excelUpload').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        // ดึง Sheet แรก
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        // แปลงเป็น JSON
+        const json = XLSX.utils.sheet_to_json(worksheet);
+
+        if(confirm(`พบข้อมูลสมาชิกจำนวน ${json.length} รายการ ต้องการนำเข้าสู่ฐานข้อมูลหรือไม่?\n(ข้อมูลที่มีรหัสเดิมจะถูกเขียนทับ)`)) {
+            await importExcelToFirebase(json);
+        }
+        document.getElementById('excelUpload').value = ''; // เคลียร์ไฟล์
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+async function importExcelToFirebase(data) {
+    tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-indigo-600 font-bold animate-pulse text-lg">กำลังอัพโหลดข้อมูลเข้าสู่ระบบ กรุณารอสักครู่...</td></tr>';
+    let count = 0;
+    
+    for(let row of data) {
+        const name = row['ชื่อ สกุล'] || row['ชื่อ-สกุล'] || row['ชื่อ-นามสกุล'];
+        if(!name) continue; 
+        
+        const mId = String(row['เลขสมาชิก'] || row['รหัสสมาชิก'] || (Date.now() + count));
+        const memberData = {
+            memberId: mId,
+            name: name,
+            zone: String(row['เขต'] || ''),
+            community: String(row['ชุมชน'] || row['ชื่อชุมชน'] || ''),
+            joinDate: String(row['วันที่สมัคร'] || ''),
+            deposit: parseFloat(row['เงินฝาก'] || 0),
+            withdraw: parseFloat(row['ถอนเงิน'] || 0),
+            deduction: parseFloat(row['หักฌาปนกิจ'] || 0),
+            balance: parseFloat(row['ยอดเงินคงเหลือ'] || 0),
+            status: String(row['สถานะสมาชิก'] || row['สถานะ'] || 'ปกติ')
+        };
+
+        try {
+            await setDoc(doc(db, "members", mId), memberData);
+            count++;
+        } catch(e) {
+            console.error("Error adding doc:", e);
+        }
+    }
+    alert(`อัพโหลดและอัพเดทข้อมูลสำเร็จจำนวน ${count} รายการ!`);
+    fetchAdminMembers();
+}
+// ----------------------------------------------------
+
 const depositInput = document.getElementById('deposit');
 const withdrawInput = document.getElementById('withdraw');
 const deductionInput = document.getElementById('deduction');
@@ -54,8 +106,6 @@ function calculateBalance() {
 document.querySelectorAll('.calc-input').forEach(input => {
     input.addEventListener('input', calculateBalance);
 });
-
-// ----------------------------------------------------
 
 async function fetchAdminMembers() {
     tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
@@ -113,7 +163,7 @@ window.openModal = (mode, id = null) => {
         memberForm.reset();
         document.getElementById('memberId').readOnly = false;
         document.getElementById('docId').value = '';
-        populateCommunities(""); // ล้าง dropdown ชุมชน
+        populateCommunities(""); 
         calculateBalance();
     } else if (mode === 'edit') {
         document.getElementById('modalTitle').innerText = 'แก้ไขข้อมูลสมาชิก';
@@ -124,7 +174,6 @@ window.openModal = (mode, id = null) => {
             document.getElementById('memberId').readOnly = true;
             document.getElementById('memberName').value = member.name;
             
-            // ตั้งค่า เขต และ ชุมชน ให้ตรงกับที่เคยบันทึกไว้
             document.getElementById('memberZone').value = member.zone || '';
             populateCommunities(member.zone || '', member.community || '');
 
