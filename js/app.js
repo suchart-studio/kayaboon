@@ -83,7 +83,6 @@ function displayMembers() {
         const zoneText = data.zone ? `(เขต ${data.zone})` : '';
         const commText = data.community || '-';
 
-        // 💡 อัปเดตตารางสรุปในหน้า User ให้เป็น 4 ช่อง (เพิ่มค่าขายขยะ)
         htmlString += `
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative">
                 <div class="flex justify-between items-start mb-3">
@@ -105,7 +104,7 @@ function displayMembers() {
                         <p class="text-green-600 font-bold">฿${parseFloat(data.deposit || 0).toLocaleString()}</p>
                     </div>
                     <div class="border-l border-gray-200">
-                        <p class="text-gray-500 mb-1">ขายขยะ</p>
+                        <p class="text-gray-500 mb-1">ขายขยะสะสม</p>
                         <p class="text-indigo-600 font-bold">฿${parseFloat(data.trashIncome || 0).toLocaleString()}</p>
                     </div>
                     <div class="border-l border-gray-200">
