@@ -45,6 +45,7 @@ window.logoutAdmin = () => {
     sessionStorage.removeItem('adminAuth');
     location.reload(); 
 };
+
 // ----------------------------------------------------
 
 const communityData = {
@@ -90,19 +91,25 @@ function updateAdminDashboardSummary(members) {
 }
 
 // ----------------------------------------------------
-// 💡 สูตรคำนวณและตั้งค่าสถานะ (ปรับปรุงใหม่ให้เป๊ะ 100%)
+// 💡 สูตรคำนวณและตั้งค่าสถานะ (มีค่าขายขยะ)
 // ----------------------------------------------------
-function calculateBalance() {
-    // ดึงค่าสดๆ จากกล่อง Input
-    const d = parseFloat(document.getElementById('deposit').value) || 0;
-    const w = parseFloat(document.getElementById('withdraw').value) || 0;
-    const ded = parseFloat(document.getElementById('deduction').value) || 0;
-    const currentBalance = d - w - ded;
-    
-    // อัปเดตช่องยอดเงินคงเหลือ
-    document.getElementById('memberBalance').value = currentBalance.toFixed(2);
+const depositInput = document.getElementById('deposit');
+const trashInput = document.getElementById('trashIncome'); // ดึงกล่อง ค่าขายขยะ
+const withdrawInput = document.getElementById('withdraw');
+const deductionInput = document.getElementById('deduction');
+const balanceInput = document.getElementById('memberBalance');
 
-    // 💡 ปรับเป็น มากกว่าหรือเท่ากับ 300 (>= 300) ถือว่าผ่านเกณฑ์
+function calculateBalance() {
+    const d = parseFloat(depositInput.value) || 0;
+    const t = parseFloat(trashInput.value) || 0; // เพิ่มค่าขายขยะ
+    const w = parseFloat(withdrawInput.value) || 0;
+    const ded = parseFloat(deductionInput.value) || 0;
+    
+    // สูตรใหม่: ฝาก + ค่าขายขยะ - ถอน - หัก
+    const currentBalance = (d + t) - w - ded;
+    
+    balanceInput.value = currentBalance.toFixed(2); 
+
     if (currentBalance >= 300) {
         document.getElementById('memberStatus').value = 'ผ่านเกณฑ์';
     } else {
@@ -110,12 +117,13 @@ function calculateBalance() {
     }
 }
 
-// ผูกให้คำนวณอัตโนมัติเมื่อมีการพิมพ์ตัวเลข
 document.querySelectorAll('.calc-input').forEach(input => {
     input.addEventListener('input', calculateBalance);
 });
-// ----------------------------------------------------
 
+// ----------------------------------------------------
+// ระบบ Excel
+// ----------------------------------------------------
 document.getElementById('excelUpload').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -135,7 +143,7 @@ document.getElementById('excelUpload').addEventListener('change', function(e) {
 });
 
 async function importExcelToFirebase(data) {
-    tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-indigo-600 font-bold animate-pulse text-lg">กำลังอัพโหลดข้อมูล...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-indigo-600 font-bold animate-pulse text-lg">กำลังอัพโหลดข้อมูล...</td></tr>';
     let count = 0;
     let batches = [];
     let batch = writeBatch(db);
@@ -146,11 +154,10 @@ async function importExcelToFirebase(data) {
         if(!name) continue; 
         
         const d = parseFloat(row['เงินฝาก'] || 0);
+        const t = parseFloat(row['ค่าขายขยะ'] || 0); // อ่านค่าขายขยะจาก Excel ด้วย
         const w = parseFloat(row['ถอนเงิน'] || 0);
         const ded = parseFloat(row['หักฌาปนกิจ'] || 0);
-        const forceCalculatedBalance = d - w - ded;
-
-        // บังคับสถานะตอนนำเข้า Excel ให้ตรงกับกฎ
+        const forceCalculatedBalance = (d + t) - w - ded;
         const autoStatus = forceCalculatedBalance >= 300 ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
 
         const mId = String(row['เลขสมาชิก'] || row['รหัสสมาชิก'] || (Date.now() + count));
@@ -161,6 +168,7 @@ async function importExcelToFirebase(data) {
             community: String(row['ชุมชน'] || row['ชื่อชุมชน'] || ''),
             joinDate: String(row['วันที่สมัคร'] || ''),
             deposit: d,
+            trashIncome: t,
             withdraw: w,
             deduction: ded,
             balance: forceCalculatedBalance, 
@@ -190,7 +198,7 @@ window.deleteAllMembers = async () => {
         if (pass !== 'ยืนยันการลบ') return alert('ยกเลิกการลบข้อมูล');
 
         try {
-            tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-red-600 font-bold animate-pulse">กำลังลบข้อมูลทั้งหมด...</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-red-600 font-bold animate-pulse">กำลังลบข้อมูลทั้งหมด...</td></tr>';
             const querySnapshot = await getDocs(collection(db, "members"));
             
             let batches = [];
@@ -218,13 +226,13 @@ window.deleteAllMembers = async () => {
 };
 
 async function fetchAdminMembers() {
-    tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-gray-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
     try {
         const querySnapshot = await getDocs(collection(db, "members"));
         allMembers = [];
         
         if (querySnapshot.empty) {
-            tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-gray-400">ยังไม่มีข้อมูลสมาชิก</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-400">ยังไม่มีข้อมูลสมาชิก</td></tr>';
             document.getElementById('adminPaginationControls').classList.add('hidden');
             updateAdminDashboardSummary([]); 
             return;
@@ -250,7 +258,7 @@ function displayAdminTable() {
     const totalItems = filteredMembers.length;
     
     if (totalItems === 0) {
-        tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-gray-400">ไม่พบข้อมูลที่ค้นหา</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-400">ไม่พบข้อมูลที่ค้นหา</td></tr>';
         document.getElementById('adminPaginationControls').classList.add('hidden');
         return;
     }
@@ -267,12 +275,14 @@ function displayAdminTable() {
         const statusClass = member.status === 'ผ่านเกณฑ์' ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100';
         const commText = member.community ? `${member.community} (เขต ${member.zone})` : '-';
 
+        // แทรกค่าขายขยะเข้ามาในตาราง
         htmlString += `
             <tr class="hover:bg-blue-50 transition-colors border-b border-gray-100">
                 <td class="p-4 font-mono text-gray-600">${member.memberId || member.id}</td>
                 <td class="p-4 font-bold text-gray-800">${member.name}</td>
                 <td class="p-4 text-blue-600 text-xs">${commText}</td>
                 <td class="p-4 text-right text-green-600">${parseFloat(member.deposit || 0).toLocaleString()}</td>
+                <td class="p-4 text-right text-indigo-600 font-bold">${parseFloat(member.trashIncome || 0).toLocaleString()}</td>
                 <td class="p-4 text-right text-red-500">${parseFloat(member.withdraw || 0).toLocaleString()}</td>
                 <td class="p-4 text-right text-orange-500">${parseFloat(member.deduction || 0).toLocaleString()}</td>
                 <td class="p-4 text-right font-bold text-blue-700 bg-blue-50/50">฿${parseFloat(member.balance || 0).toLocaleString()}</td>
@@ -322,11 +332,12 @@ window.openModal = (mode, id = null) => {
             document.getElementById('memberZone').value = member.zone || '';
             populateCommunities(member.zone || '', member.community || '');
             document.getElementById('joinDate').value = member.joinDate || '';
+            
             document.getElementById('deposit').value = member.deposit || 0;
+            document.getElementById('trashIncome').value = member.trashIncome || 0; // ดึงค่าขายขยะมาแสดง
             document.getElementById('withdraw').value = member.withdraw || 0;
             document.getElementById('deduction').value = member.deduction || 0;
             
-            // เรียก calculateBalance เพื่ออัปเดตยอดคงเหลือ + ปรับ Dropdown สถานะให้ทันที
             calculateBalance(); 
         }
     }
@@ -341,7 +352,6 @@ memberForm.addEventListener('submit', async (e) => {
     const docId = document.getElementById('docId').value;
     const mId = document.getElementById('memberId').value;
     
-    // บังคับรันฟังก์ชันคำนวณอีกรอบ เพื่อให้ชัวร์ว่า Dropdown เลือกสถานะได้ถูกต้องตามยอดเงินจริง
     calculateBalance();
 
     const data = {
@@ -351,10 +361,11 @@ memberForm.addEventListener('submit', async (e) => {
         community: document.getElementById('memberCommunity').value,
         joinDate: document.getElementById('joinDate').value,
         deposit: parseFloat(document.getElementById('deposit').value) || 0,
+        trashIncome: parseFloat(document.getElementById('trashIncome').value) || 0, // บันทึกค่าขายขยะ
         withdraw: parseFloat(document.getElementById('withdraw').value) || 0,
         deduction: parseFloat(document.getElementById('deduction').value) || 0,
         balance: parseFloat(document.getElementById('memberBalance').value) || 0, 
-        status: document.getElementById('memberStatus').value
+        status: document.getElementById('memberStatus').value 
     };
 
     try {
