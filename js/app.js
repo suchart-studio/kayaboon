@@ -39,15 +39,17 @@ function displayMembers(members) {
 
     members.forEach(data => {
         const statusColor = data.status === 'ปกติ' ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
-        
-        // การ์ดแสดงผลแบบใหม่ มีข้อมูลครบถ้วน
+        const zoneText = data.zone ? `(เขต ${data.zone})` : '';
+        const commText = data.community || '-';
+
         const card = `
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative">
                 <div class="flex justify-between items-start mb-3">
                     <div>
                         <h3 class="font-bold text-gray-800 text-base">${data.name || 'ไม่มีชื่อ'}</h3>
                         <p class="text-xs text-gray-400">รหัส: ${data.memberId || data.id}</p>
-                        <p class="text-[10px] text-gray-400 mt-1">วันที่สมัคร: ${data.joinDate || '-'}</p>
+                        <p class="text-xs text-blue-600 mt-1">📍 ชุมชน${commText} ${zoneText}</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5">วันที่สมัคร: ${data.joinDate || '-'}</p>
                     </div>
                     <div class="text-right">
                         <span class="text-[10px] px-2 py-0.5 rounded-full ${statusColor}">${data.status || 'ไม่ระบุ'}</span>
@@ -76,17 +78,16 @@ function displayMembers(members) {
     });
 }
 
-// ค้นหา
 searchInput.addEventListener('input', (e) => {
     const term = e.target.value.toLowerCase();
     const filtered = allMembers.filter(m => 
         (m.name && m.name.toLowerCase().includes(term)) || 
-        (m.memberId && m.memberId.toLowerCase().includes(term))
+        (m.memberId && m.memberId.toLowerCase().includes(term)) ||
+        (m.community && m.community.toLowerCase().includes(term))
     );
     displayMembers(filtered);
 });
 
-// นำเข้าข้อมูล (ดักจับคอลัมน์ใหม่จาก CSV - ให้ปรับชื่อในวงเล็บ [] ให้ตรงกับหัวคอลัมน์ใน Google Sheet จริงของคุณ)
 document.getElementById('importDataBtn').addEventListener('click', () => {
     document.getElementById('importDataBtn').innerText = 'กำลังดึงข้อมูล...';
     Papa.parse(csvUrl, {
@@ -96,13 +97,14 @@ document.getElementById('importDataBtn').addEventListener('click', () => {
             const data = results.data;
             let count = 0;
             for(let row of data) {
-                // ปรับให้ตรงกับหัวคอลัมน์ของ Sheet คุณ
                 const name = row['ชื่อ สกุล'] || row['ชื่อ-สกุล'] || row['ชื่อ-นามสกุล'];
                 if(!name) continue; 
                 
                 const memberData = {
                     memberId: row['เลขสมาชิก'] || row['รหัสสมาชิก'] || String(Date.now() + count),
                     name: name,
+                    zone: row['เขต'] || '',
+                    community: row['ชุมชน'] || row['ชื่อชุมชน'] || '',
                     joinDate: row['วันที่สมัคร'] || '',
                     deposit: parseFloat(row['เงินฝาก'] || 0),
                     withdraw: parseFloat(row['ถอนเงิน'] || 0),
