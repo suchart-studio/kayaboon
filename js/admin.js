@@ -5,11 +5,10 @@ const tableBody = document.getElementById('adminMemberTable');
 const memberModal = document.getElementById('memberModal');
 const memberForm = document.getElementById('memberForm');
 
-// 💡 ตัวแปรสำหรับ Pagination
 let allMembers = [];
 let filteredMembers = [];
 let currentPage = 1;
-const rowsPerPage = 50; // กำหนดหน้าละ 50 รายการ
+const rowsPerPage = 50; 
 
 const communityData = {
     "1": ["โนนชัย 1", "โนนชัย 2", "โนนชัย 3", "ดอนหญ้านาง 1", "ดอนหญ้านาง 2", "ดอนหญ้านาง 3", "หลังศูนย์ราชการ 1", "หลังศูนย์ราชการ 2", "เทพารักษ์ 1", "เทพารักษ์ 2", "เทพารักษ์ 3", "เทพารักษ์ 4", "เทพารักษ์ 5", "พัฒนาเทพารักษ์", "เจ้าพ่อเกษม", "เจ้าพ่อทองสุข", "บขส"],
@@ -80,7 +79,8 @@ async function importExcelToFirebase(data) {
             withdraw: parseFloat(row['ถอนเงิน'] || 0),
             deduction: parseFloat(row['หักฌาปนกิจ'] || 0),
             balance: parseFloat(row['ยอดเงินคงเหลือ'] || 0),
-            status: String(row['สถานะสมาชิก'] || row['สถานะ'] || 'ปกติ')
+            // เปลี่ยนค่าเริ่มต้นเป็น "ผ่านเกณฑ์"
+            status: String(row['สถานะสมาชิก'] || row['สถานะ'] || 'ผ่านเกณฑ์')
         };
 
         const docRef = doc(db, "members", mId);
@@ -166,7 +166,7 @@ async function fetchAdminMembers() {
             allMembers.push({ id: docSnap.id, ...docSnap.data() });
         });
 
-        filteredMembers = [...allMembers]; // เริ่มต้นให้ข้อมูลค้นหา = ข้อมูลทั้งหมด
+        filteredMembers = [...allMembers]; 
         currentPage = 1;
         displayAdminTable();
 
@@ -175,7 +175,6 @@ async function fetchAdminMembers() {
     }
 }
 
-// 💡 ระบบแสดงผลตารางแบบตัดหน้า
 function displayAdminTable() {
     tableBody.innerHTML = '';
     const totalItems = filteredMembers.length;
@@ -195,7 +194,8 @@ function displayAdminTable() {
 
     let htmlString = '';
     displayData.forEach(member => {
-        const statusClass = member.status === 'ปกติ' ? 'text-green-700 bg-green-100' : (member.status === 'พ้นสภาพ' ? 'text-red-700 bg-red-100' : 'text-gray-700 bg-gray-200');
+        // เปลี่ยนการตั้งสีสถานะใหม่ในตารางแอดมิน
+        const statusClass = member.status === 'ผ่านเกณฑ์' ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100';
         const commText = member.community ? `${member.community} (เขต ${member.zone})` : '-';
 
         htmlString += `
@@ -220,13 +220,10 @@ function displayAdminTable() {
     });
 
     tableBody.innerHTML = htmlString;
-
-    // อัพเดทข้อมูลปุ่มแบ่งหน้า
     document.getElementById('adminPaginationControls').classList.remove('hidden');
     document.getElementById('adminPageInfo').innerText = `หน้า ${currentPage} จาก ${totalPages} (รวม ${totalItems} รายการ)`;
 }
 
-// 💡 ฟังก์ชันเปลี่ยนหน้า
 window.prevAdminPage = () => {
     if (currentPage > 1) {
         currentPage--;
@@ -267,7 +264,9 @@ window.openModal = (mode, id = null) => {
             document.getElementById('withdraw').value = member.withdraw || 0;
             document.getElementById('deduction').value = member.deduction || 0;
             document.getElementById('memberBalance').value = member.balance || 0;
-            document.getElementById('memberStatus').value = member.status;
+            
+            // ป้องกันข้อมูลเก่าที่ไม่ใช่ ผ่านเกณฑ์/ไม่ผ่านเกณฑ์ ให้ตกไปที่ ไม่ผ่านเกณฑ์ ไว้ก่อน หรือแมพตรงๆ
+            document.getElementById('memberStatus').value = (member.status === 'ผ่านเกณฑ์') ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
         }
     }
     memberModal.classList.remove('hidden');
@@ -322,7 +321,7 @@ document.getElementById('adminSearchInput').addEventListener('input', (e) => {
             (m.community && m.community.toLowerCase().includes(term))
         );
     }
-    currentPage = 1; // เมื่อค้นหาใหม่ ให้กลับไปหน้า 1 เสมอ
+    currentPage = 1; 
     displayAdminTable();
 });
 
