@@ -10,6 +10,48 @@ let filteredMembers = [];
 let currentPage = 1;
 const rowsPerPage = 50; 
 
+// ----------------------------------------------------
+// ระบบ Login อย่างง่าย (รหัสผ่าน: 987654321)
+// ----------------------------------------------------
+const loginOverlay = document.getElementById('loginOverlay');
+const adminContent = document.getElementById('adminContent');
+const loginError = document.getElementById('loginError');
+const adminPasswordInput = document.getElementById('adminPassword');
+
+// ตรวจสอบสถานะล็อคอิน
+if (sessionStorage.getItem('adminAuth') === 'true') {
+    loginOverlay.classList.add('hidden');
+    adminContent.classList.remove('hidden');
+    fetchAdminMembers(); // โหลดข้อมูลเมื่อเคยเข้าสู่ระบบแล้ว
+}
+
+window.checkPassword = () => {
+    if (adminPasswordInput.value === '987654321') {
+        sessionStorage.setItem('adminAuth', 'true');
+        loginOverlay.classList.add('hidden');
+        adminContent.classList.remove('hidden');
+        fetchAdminMembers(); // เริ่มโหลดข้อมูลจาก Firebase
+    } else {
+        loginError.classList.remove('hidden');
+        adminPasswordInput.value = ''; // ล้างช่องพิมพ์
+        adminPasswordInput.focus();
+    }
+};
+
+// กดปุ่ม Enter ในช่องรหัสผ่านเพื่อล็อคอิน
+adminPasswordInput.addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') {
+        checkPassword();
+    }
+});
+
+// ฟังก์ชันออกจากระบบ
+window.logoutAdmin = () => {
+    sessionStorage.removeItem('adminAuth');
+    location.reload(); // โหลดหน้าใหม่
+};
+// ----------------------------------------------------
+
 const communityData = {
     "1": ["โนนชัย 1", "โนนชัย 2", "โนนชัย 3", "ดอนหญ้านาง 1", "ดอนหญ้านาง 2", "ดอนหญ้านาง 3", "หลังศูนย์ราชการ 1", "หลังศูนย์ราชการ 2", "เทพารักษ์ 1", "เทพารักษ์ 2", "เทพารักษ์ 3", "เทพารักษ์ 4", "เทพารักษ์ 5", "พัฒนาเทพารักษ์", "เจ้าพ่อเกษม", "เจ้าพ่อทองสุข", "บขส"],
     "2": ["หนองใหญ่ 1", "หนองใหญ่ 2", "หนองใหญ่ 3", "หนองใหญ่ 4", "บะขาม", "ศรีจันทร์ประชา", "นาคะประเวศน์", "คุ้มพระลับ", "ชัยณรงค์สามัคคี", "ธารทิพย์", "หน้า รพ.ศูนย์ฯ", "หลักเมือง", "บ้านเลขที่ 37", "ทุ่งเศรษฐี", "ศิริมงคล", "ศรีจันทร์พัฒนา", "มิตรสัมพันธ์1", "มิตรสัมพันธ์2", "ทุ่งสร้างพัฒนา", "โพธิบัลลังค์ทอง", "บ้านพัก ตชด", "หัวสะพานสัมพันธ์", "ชลประทาน", "เจ้าพ่อขุนภักดี", "ธนาคร", "คุ้มหนองคู", "ศรีจันทร์", "ตรีเทพนครขอนแก่น"],
@@ -79,7 +121,6 @@ async function importExcelToFirebase(data) {
             withdraw: parseFloat(row['ถอนเงิน'] || 0),
             deduction: parseFloat(row['หักฌาปนกิจ'] || 0),
             balance: parseFloat(row['ยอดเงินคงเหลือ'] || 0),
-            // เปลี่ยนค่าเริ่มต้นเป็น "ผ่านเกณฑ์"
             status: String(row['สถานะสมาชิก'] || row['สถานะ'] || 'ผ่านเกณฑ์')
         };
 
@@ -194,7 +235,6 @@ function displayAdminTable() {
 
     let htmlString = '';
     displayData.forEach(member => {
-        // เปลี่ยนการตั้งสีสถานะใหม่ในตารางแอดมิน
         const statusClass = member.status === 'ผ่านเกณฑ์' ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100';
         const commText = member.community ? `${member.community} (เขต ${member.zone})` : '-';
 
@@ -264,8 +304,6 @@ window.openModal = (mode, id = null) => {
             document.getElementById('withdraw').value = member.withdraw || 0;
             document.getElementById('deduction').value = member.deduction || 0;
             document.getElementById('memberBalance').value = member.balance || 0;
-            
-            // ป้องกันข้อมูลเก่าที่ไม่ใช่ ผ่านเกณฑ์/ไม่ผ่านเกณฑ์ ให้ตกไปที่ ไม่ผ่านเกณฑ์ ไว้ก่อน หรือแมพตรงๆ
             document.getElementById('memberStatus').value = (member.status === 'ผ่านเกณฑ์') ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
         }
     }
@@ -325,4 +363,4 @@ document.getElementById('adminSearchInput').addEventListener('input', (e) => {
     displayAdminTable();
 });
 
-fetchAdminMembers();
+// *หมายเหตุ: นำคำสั่ง fetchAdminMembers() ตอนเริ่มต้นออกแล้ว เพราะย้ายไปทำงานตอน Login สำเร็จแทน
