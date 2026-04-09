@@ -4,7 +4,11 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.11.0/
 const memberListEl = document.getElementById('memberList');
 const searchInput = document.getElementById('searchInput');
 
+// 💡 ตัวแปรสำหรับ Pagination ฝั่ง User
 let allMembers = [];
+let filteredMembers = [];
+let currentPage = 1;
+const itemsPerPage = 50;
 
 function calculateSummary(members) {
     let totalBalance = 0;
@@ -29,6 +33,7 @@ async function loadMembers() {
         
         if(querySnapshot.empty) {
             memberListEl.innerHTML = '<div class="text-center text-red-500 bg-red-50 p-4 rounded-xl">ไม่พบข้อมูลในระบบ</div>';
+            document.getElementById('userPaginationControls').classList.add('hidden');
             return;
         }
 
@@ -38,7 +43,10 @@ async function loadMembers() {
         });
         
         calculateSummary(allMembers);
-        displayMembers(allMembers);
+        
+        filteredMembers = [...allMembers];
+        currentPage = 1;
+        displayMembers();
 
     } catch (error) {
         console.error("Error loading documents: ", error);
@@ -46,19 +54,25 @@ async function loadMembers() {
     }
 }
 
-function displayMembers(members) {
-    if (members.length === 0) {
+// 💡 แสดงผลแบบคำนวณหน้า
+function displayMembers() {
+    memberListEl.innerHTML = '';
+    const totalItems = filteredMembers.length;
+
+    if (totalItems === 0) {
         memberListEl.innerHTML = '<div class="text-center text-gray-500 py-10">ไม่พบสมาชิกที่ค้นหา</div>';
+        document.getElementById('userPaginationControls').classList.add('hidden');
         return;
     }
 
-    // 💡 จำกัดการแสดงผลแค่ 50 รายการ เพื่อไม่ให้มือถือค้าง
-    const limit = 50;
-    const displayData = members.slice(0, limit);
-    
-    // 💡 รวบรวม HTML เป็นก้อนเดียวแล้วแสดงผลทีเดียว (ทำให้เร็วขึ้น 100 เท่า)
-    let htmlString = '';
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    if (currentPage > totalPages) currentPage = totalPages;
 
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const displayData = filteredMembers.slice(startIndex, endIndex);
+
+    let htmlString = '';
     displayData.forEach(data => {
         const statusColor = data.status === 'ปกติ' ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
         const zoneText = data.zone ? `(เขต ${data.zone})` : '';
@@ -88,28 +102,44 @@ function displayMembers(members) {
         `;
     });
 
-    if (members.length > limit) {
-        htmlString += `<div class="text-center text-gray-400 text-xs py-4">แสดงผล ${limit} รายการแรก จากทั้งหมด ${members.length} รายการ<br>(โปรดพิมพ์ชื่อในช่องค้นหา หากต้องการดูรายชื่ออื่น)</div>`;
-    }
-
     memberListEl.innerHTML = htmlString;
+    
+    document.getElementById('userPaginationControls').classList.remove('hidden');
+    document.getElementById('userPageInfo').innerText = `${currentPage} / ${totalPages}`;
 }
+
+// 💡 ฟังก์ชันเปลี่ยนหน้าสำหรับฝั่ง User
+window.prevUserPage = () => {
+    if (currentPage > 1) {
+        currentPage--;
+        displayMembers();
+        window.scrollTo({ top: 250, behavior: 'smooth' }); // เลื่อนจอกลับไปข้างบนตารางนิดหน่อย
+    }
+};
+
+window.nextUserPage = () => {
+    const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
+    if (currentPage < totalPages) {
+        currentPage++;
+        displayMembers();
+        window.scrollTo({ top: 250, behavior: 'smooth' });
+    }
+};
 
 searchInput.addEventListener('input', (e) => {
     const term = e.target.value.trim().toLowerCase();
     
-    // ถ้าช่องค้นหาว่าง ให้แสดงทั้งหมด (แต่ฟังก์ชัน displayMembers จะตัดให้เหลือ 50 รายการเอง)
     if (term === '') {
-        displayMembers(allMembers);
-        return;
+        filteredMembers = [...allMembers];
+    } else {
+        filteredMembers = allMembers.filter(m => 
+            (m.name && m.name.toLowerCase().includes(term)) || 
+            (m.memberId && m.memberId.toLowerCase().includes(term)) ||
+            (m.community && m.community.toLowerCase().includes(term))
+        );
     }
-
-    const filtered = allMembers.filter(m => 
-        (m.name && m.name.toLowerCase().includes(term)) || 
-        (m.memberId && m.memberId.toLowerCase().includes(term)) ||
-        (m.community && m.community.toLowerCase().includes(term))
-    );
-    displayMembers(filtered);
+    currentPage = 1;
+    displayMembers();
 });
 
 loadMembers();
