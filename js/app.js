@@ -4,7 +4,6 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.11.0/
 const memberListEl = document.getElementById('memberList');
 const searchInput = document.getElementById('searchInput');
 
-// ตัวแปรสำหรับ Pagination ฝั่ง User
 let allMembers = [];
 let filteredMembers = [];
 let currentPage = 1;
@@ -17,7 +16,8 @@ function calculateSummary(members) {
 
     members.forEach(m => {
         totalBalance += parseFloat(m.balance || 0);
-        if (m.status === 'ปกติ') activeCount++;
+        // เปลี่ยนเงื่อนไขนับสถานะ
+        if (m.status === 'ผ่านเกณฑ์') activeCount++;
         else inactiveCount++;
     });
 
@@ -42,10 +42,7 @@ async function loadMembers() {
             allMembers.push({ id: docSnap.id, ...docSnap.data() });
         });
         
-        // คำนวณสรุปยอด Dashboard จากข้อมูลทั้งหมด
         calculateSummary(allMembers);
-        
-        // 💡 เริ่มต้น: ยังไม่ต้องแสดงตาราง ให้โชว์ข้อความให้ค้นหาแทน
         showSearchPrompt();
 
     } catch (error) {
@@ -54,7 +51,6 @@ async function loadMembers() {
     }
 }
 
-// 💡 ฟังก์ชันแสดงข้อความให้เริ่มค้นหา
 function showSearchPrompt() {
     memberListEl.innerHTML = `
         <div class="text-center text-gray-500 py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
@@ -65,12 +61,10 @@ function showSearchPrompt() {
     document.getElementById('userPaginationControls').classList.add('hidden');
 }
 
-// แสดงผลเมื่อมีการค้นหา
 function displayMembers() {
     memberListEl.innerHTML = '';
     const totalItems = filteredMembers.length;
 
-    // ถ้าหาไม่เจอ
     if (totalItems === 0) {
         memberListEl.innerHTML = '<div class="text-center text-gray-500 py-10 bg-white rounded-2xl shadow-sm border border-gray-100">ไม่พบข้อมูลสมาชิกที่ค้นหา</div>';
         document.getElementById('userPaginationControls').classList.add('hidden');
@@ -86,7 +80,8 @@ function displayMembers() {
 
     let htmlString = '';
     displayData.forEach(data => {
-        const statusColor = data.status === 'ปกติ' ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
+        // เปลี่ยนการตั้งค่าสีตามสถานะใหม่
+        const statusColor = data.status === 'ผ่านเกณฑ์' ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
         const zoneText = data.zone ? `(เขต ${data.zone})` : '';
         const commText = data.community || '-';
 
@@ -116,7 +111,6 @@ function displayMembers() {
 
     memberListEl.innerHTML = htmlString;
     
-    // ถ้ามีข้อมูลมากกว่า 1 หน้า ให้แสดงปุ่มแบ่งหน้า
     if (totalPages > 1) {
         document.getElementById('userPaginationControls').classList.remove('hidden');
         document.getElementById('userPageInfo').innerText = `${currentPage} / ${totalPages}`;
@@ -125,12 +119,11 @@ function displayMembers() {
     }
 }
 
-// ฟังก์ชันเปลี่ยนหน้าสำหรับฝั่ง User
 window.prevUserPage = () => {
     if (currentPage > 1) {
         currentPage--;
         displayMembers();
-        window.scrollTo({ top: 250, behavior: 'smooth' }); // เลื่อนจอกลับไปข้างบนตาราง
+        window.scrollTo({ top: 250, behavior: 'smooth' });
     }
 };
 
@@ -143,11 +136,9 @@ window.nextUserPage = () => {
     }
 };
 
-// 💡 ดักจับการพิมพ์ค้นหา
 searchInput.addEventListener('input', (e) => {
     const term = e.target.value.trim().toLowerCase();
     
-    // ถ้าช่องค้นหาถูกลบจนว่างเปล่า ให้ซ่อนรายชื่อแล้วแสดงข้อความให้ค้นหาใหม่
     if (term === '') {
         filteredMembers = [];
         showSearchPrompt();
@@ -164,5 +155,4 @@ searchInput.addEventListener('input', (e) => {
     displayMembers();
 });
 
-// เริ่มโหลดข้อมูล
 loadMembers();
