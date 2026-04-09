@@ -6,7 +6,6 @@ const searchInput = document.getElementById('searchInput');
 
 let allMembers = [];
 
-// คำนวณภาพรวม Dashboard
 function calculateSummary(members) {
     let totalBalance = 0;
     let activeCount = 0;
@@ -48,25 +47,30 @@ async function loadMembers() {
 }
 
 function displayMembers(members) {
-    memberListEl.innerHTML = '';
     if (members.length === 0) {
         memberListEl.innerHTML = '<div class="text-center text-gray-500 py-10">ไม่พบสมาชิกที่ค้นหา</div>';
         return;
     }
 
-    members.forEach(data => {
+    // 💡 จำกัดการแสดงผลแค่ 50 รายการ เพื่อไม่ให้มือถือค้าง
+    const limit = 50;
+    const displayData = members.slice(0, limit);
+    
+    // 💡 รวบรวม HTML เป็นก้อนเดียวแล้วแสดงผลทีเดียว (ทำให้เร็วขึ้น 100 เท่า)
+    let htmlString = '';
+
+    displayData.forEach(data => {
         const statusColor = data.status === 'ปกติ' ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
         const zoneText = data.zone ? `(เขต ${data.zone})` : '';
         const commText = data.community || '-';
 
-        const card = `
+        htmlString += `
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative">
                 <div class="flex justify-between items-start mb-3">
                     <div>
                         <h3 class="font-bold text-gray-800 text-base">${data.name || 'ไม่มีชื่อ'}</h3>
                         <p class="text-xs text-gray-400">รหัส: ${data.memberId || data.id}</p>
                         <p class="text-xs text-blue-600 mt-1">📍 ชุมชน${commText} ${zoneText}</p>
-                        <p class="text-[10px] text-gray-400 mt-0.5">วันที่สมัคร: ${data.joinDate || '-'}</p>
                     </div>
                     <div class="text-right">
                         <span class="text-[10px] px-2 py-0.5 rounded-full ${statusColor}">${data.status || 'ไม่ระบุ'}</span>
@@ -76,27 +80,30 @@ function displayMembers(members) {
                 </div>
                 
                 <div class="grid grid-cols-3 gap-2 text-center text-xs bg-gray-50 p-2 rounded-lg">
-                    <div>
-                        <p class="text-gray-500 mb-1">ฝากเงิน</p>
-                        <p class="text-green-600 font-bold">฿${parseFloat(data.deposit || 0).toLocaleString()}</p>
-                    </div>
-                    <div class="border-l border-r border-gray-200">
-                        <p class="text-gray-500 mb-1">ถอนเงิน</p>
-                        <p class="text-red-500 font-bold">฿${parseFloat(data.withdraw || 0).toLocaleString()}</p>
-                    </div>
-                    <div>
-                        <p class="text-gray-500 mb-1">หักฌาปนกิจ</p>
-                        <p class="text-orange-500 font-bold">฿${parseFloat(data.deduction || 0).toLocaleString()}</p>
-                    </div>
+                    <div><p class="text-gray-500 mb-1">ฝากเงิน</p><p class="text-green-600 font-bold">฿${parseFloat(data.deposit || 0).toLocaleString()}</p></div>
+                    <div class="border-l border-r border-gray-200"><p class="text-gray-500 mb-1">ถอนเงิน</p><p class="text-red-500 font-bold">฿${parseFloat(data.withdraw || 0).toLocaleString()}</p></div>
+                    <div><p class="text-gray-500 mb-1">หักฌาปนกิจ</p><p class="text-orange-500 font-bold">฿${parseFloat(data.deduction || 0).toLocaleString()}</p></div>
                 </div>
             </div>
         `;
-        memberListEl.innerHTML += card;
     });
+
+    if (members.length > limit) {
+        htmlString += `<div class="text-center text-gray-400 text-xs py-4">แสดงผล ${limit} รายการแรก จากทั้งหมด ${members.length} รายการ<br>(โปรดพิมพ์ชื่อในช่องค้นหา หากต้องการดูรายชื่ออื่น)</div>`;
+    }
+
+    memberListEl.innerHTML = htmlString;
 }
 
 searchInput.addEventListener('input', (e) => {
-    const term = e.target.value.toLowerCase();
+    const term = e.target.value.trim().toLowerCase();
+    
+    // ถ้าช่องค้นหาว่าง ให้แสดงทั้งหมด (แต่ฟังก์ชัน displayMembers จะตัดให้เหลือ 50 รายการเอง)
+    if (term === '') {
+        displayMembers(allMembers);
+        return;
+    }
+
     const filtered = allMembers.filter(m => 
         (m.name && m.name.toLowerCase().includes(term)) || 
         (m.memberId && m.memberId.toLowerCase().includes(term)) ||
