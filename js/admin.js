@@ -72,9 +72,6 @@ function populateCommunities(zoneValue, selectedCommunity = "") {
     }
 }
 
-// ----------------------------------------------------
-// ระบบบังคับคำนวณและอัพเดทยอดรวมใน Dashboard
-// ----------------------------------------------------
 function updateAdminDashboardSummary(members) {
     let totalBalance = 0;
     let activeCount = 0;
@@ -92,30 +89,30 @@ function updateAdminDashboardSummary(members) {
     document.getElementById('adminInactive').innerText = inactiveCount.toLocaleString();
 }
 
-const depositInput = document.getElementById('deposit');
-const withdrawInput = document.getElementById('withdraw');
-const deductionInput = document.getElementById('deduction');
-const balanceInput = document.getElementById('memberBalance');
-const statusSelect = document.getElementById('memberStatus'); // ตัวเลือกสถานะ
-
+// ----------------------------------------------------
+// 💡 สูตรคำนวณและตั้งค่าสถานะ (ปรับปรุงใหม่ให้เป๊ะ 100%)
+// ----------------------------------------------------
 function calculateBalance() {
-    const d = parseFloat(depositInput.value) || 0;
-    const w = parseFloat(withdrawInput.value) || 0;
-    const ded = parseFloat(deductionInput.value) || 0;
+    // ดึงค่าสดๆ จากกล่อง Input
+    const d = parseFloat(document.getElementById('deposit').value) || 0;
+    const w = parseFloat(document.getElementById('withdraw').value) || 0;
+    const ded = parseFloat(document.getElementById('deduction').value) || 0;
     const currentBalance = d - w - ded;
     
-    balanceInput.value = currentBalance.toFixed(2); // สูตร: ฝาก - ถอน - หัก
+    // อัปเดตช่องยอดเงินคงเหลือ
+    document.getElementById('memberBalance').value = currentBalance.toFixed(2);
 
-    // 💡 เช็คยอดเงิน: มากกว่า 300 เป็นผ่านเกณฑ์ นอกนั้นไม่ผ่าน
-    if (currentBalance > 300) {
-        statusSelect.value = 'ผ่านเกณฑ์';
+    // 💡 ปรับเป็น มากกว่าหรือเท่ากับ 300 (>= 300) ถือว่าผ่านเกณฑ์
+    if (currentBalance >= 300) {
+        document.getElementById('memberStatus').value = 'ผ่านเกณฑ์';
     } else {
-        statusSelect.value = 'ไม่ผ่านเกณฑ์';
+        document.getElementById('memberStatus').value = 'ไม่ผ่านเกณฑ์';
     }
 }
 
+// ผูกให้คำนวณอัตโนมัติเมื่อมีการพิมพ์ตัวเลข
 document.querySelectorAll('.calc-input').forEach(input => {
-    input.addEventListener('input', calculateBalance); // คอยจับการพิมพ์เพื่อคำนวณสดๆ
+    input.addEventListener('input', calculateBalance);
 });
 // ----------------------------------------------------
 
@@ -148,14 +145,13 @@ async function importExcelToFirebase(data) {
         const name = row['ชื่อ สกุล'] || row['ชื่อ-สกุล'] || row['ชื่อ-นามสกุล'];
         if(!name) continue; 
         
-        // บังคับคำนวณใหม่ตอนอัพโหลด
         const d = parseFloat(row['เงินฝาก'] || 0);
         const w = parseFloat(row['ถอนเงิน'] || 0);
         const ded = parseFloat(row['หักฌาปนกิจ'] || 0);
         const forceCalculatedBalance = d - w - ded;
 
-        // 💡 บังคับสถานะตามยอดเงินคงเหลือ (>300)
-        const autoStatus = forceCalculatedBalance > 300 ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
+        // บังคับสถานะตอนนำเข้า Excel ให้ตรงกับกฎ
+        const autoStatus = forceCalculatedBalance >= 300 ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
 
         const mId = String(row['เลขสมาชิก'] || row['รหัสสมาชิก'] || (Date.now() + count));
         const memberData = {
@@ -168,7 +164,7 @@ async function importExcelToFirebase(data) {
             withdraw: w,
             deduction: ded,
             balance: forceCalculatedBalance, 
-            status: autoStatus // บันทึกสถานะตามที่คำนวณได้
+            status: autoStatus 
         };
 
         const docRef = doc(db, "members", mId);
@@ -314,7 +310,7 @@ window.openModal = (mode, id = null) => {
         document.getElementById('memberId').readOnly = false;
         document.getElementById('docId').value = '';
         populateCommunities(""); 
-        calculateBalance(); // เรียกเพื่อให้คำนวณและตั้งสถานะเริ่มต้น
+        calculateBalance(); 
     } else if (mode === 'edit') {
         document.getElementById('modalTitle').innerText = 'แก้ไขข้อมูลสมาชิก';
         const member = allMembers.find(m => m.id === id);
@@ -330,7 +326,7 @@ window.openModal = (mode, id = null) => {
             document.getElementById('withdraw').value = member.withdraw || 0;
             document.getElementById('deduction').value = member.deduction || 0;
             
-            // เรียกฟังก์ชันเพื่อคำนวณยอดเงินใหม่และเซ็ตสถานะให้ตรงกันทันที
+            // เรียก calculateBalance เพื่ออัปเดตยอดคงเหลือ + ปรับ Dropdown สถานะให้ทันที
             calculateBalance(); 
         }
     }
@@ -345,7 +341,7 @@ memberForm.addEventListener('submit', async (e) => {
     const docId = document.getElementById('docId').value;
     const mId = document.getElementById('memberId').value;
     
-    // บังคับคำนวณก่อนบันทึกเสมอ เพื่อความชัวร์
+    // บังคับรันฟังก์ชันคำนวณอีกรอบ เพื่อให้ชัวร์ว่า Dropdown เลือกสถานะได้ถูกต้องตามยอดเงินจริง
     calculateBalance();
 
     const data = {
@@ -354,11 +350,11 @@ memberForm.addEventListener('submit', async (e) => {
         zone: document.getElementById('memberZone').value,
         community: document.getElementById('memberCommunity').value,
         joinDate: document.getElementById('joinDate').value,
-        deposit: parseFloat(depositInput.value),
-        withdraw: parseFloat(withdrawInput.value),
-        deduction: parseFloat(deductionInput.value),
-        balance: parseFloat(balanceInput.value), 
-        status: document.getElementById('memberStatus').value // จะถูกตั้งค่าตามกฏ > 300 อัตโนมัติแล้ว
+        deposit: parseFloat(document.getElementById('deposit').value) || 0,
+        withdraw: parseFloat(document.getElementById('withdraw').value) || 0,
+        deduction: parseFloat(document.getElementById('deduction').value) || 0,
+        balance: parseFloat(document.getElementById('memberBalance').value) || 0, 
+        status: document.getElementById('memberStatus').value
     };
 
     try {
