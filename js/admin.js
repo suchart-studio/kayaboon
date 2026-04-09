@@ -91,22 +91,24 @@ function updateAdminDashboardSummary(members) {
 }
 
 // ----------------------------------------------------
-// 💡 สูตรคำนวณและตั้งค่าสถานะ (มีค่าขายขยะ)
+// 💡 สูตรคำนวณและตั้งค่าสถานะ (ฝาก + ขยะสะสม + ขยะวันนี้ - ถอน - หัก)
 // ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
-const trashInput = document.getElementById('trashIncome'); // ดึงกล่อง ค่าขายขยะ
+const trashIncomeInput = document.getElementById('trashIncome'); // ขายขยะสะสม
+const todayTrashInput = document.getElementById('todayTrash');   // ขายขยะวันนี้
 const withdrawInput = document.getElementById('withdraw');
 const deductionInput = document.getElementById('deduction');
 const balanceInput = document.getElementById('memberBalance');
 
 function calculateBalance() {
     const d = parseFloat(depositInput.value) || 0;
-    const t = parseFloat(trashInput.value) || 0; // เพิ่มค่าขายขยะ
+    const tAccum = parseFloat(trashIncomeInput.value) || 0; // สะสม
+    const tToday = parseFloat(todayTrashInput.value) || 0;  // วันนี้
     const w = parseFloat(withdrawInput.value) || 0;
     const ded = parseFloat(deductionInput.value) || 0;
     
-    // สูตรใหม่: ฝาก + ค่าขายขยะ - ถอน - หัก
-    const currentBalance = (d + t) - w - ded;
+    // ยอดรวม = ฝาก + สะสม + วันนี้ - ถอน - หัก
+    const currentBalance = (d + tAccum + tToday) - w - ded;
     
     balanceInput.value = currentBalance.toFixed(2); 
 
@@ -154,7 +156,7 @@ async function importExcelToFirebase(data) {
         if(!name) continue; 
         
         const d = parseFloat(row['เงินฝาก'] || 0);
-        const t = parseFloat(row['ค่าขายขยะ'] || 0); // อ่านค่าขายขยะจาก Excel ด้วย
+        const t = parseFloat(row['ค่าขายขยะ'] || 0); // อ่านเป็นค่าขยะสะสม
         const w = parseFloat(row['ถอนเงิน'] || 0);
         const ded = parseFloat(row['หักฌาปนกิจ'] || 0);
         const forceCalculatedBalance = (d + t) - w - ded;
@@ -275,7 +277,6 @@ function displayAdminTable() {
         const statusClass = member.status === 'ผ่านเกณฑ์' ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100';
         const commText = member.community ? `${member.community} (เขต ${member.zone})` : '-';
 
-        // แทรกค่าขายขยะเข้ามาในตาราง
         htmlString += `
             <tr class="hover:bg-blue-50 transition-colors border-b border-gray-100">
                 <td class="p-4 font-mono text-gray-600">${member.memberId || member.id}</td>
@@ -320,6 +321,7 @@ window.openModal = (mode, id = null) => {
         document.getElementById('memberId').readOnly = false;
         document.getElementById('docId').value = '';
         populateCommunities(""); 
+        document.getElementById('todayTrash').value = 0; // เซ็ตเป็น 0 เสมอ
         calculateBalance(); 
     } else if (mode === 'edit') {
         document.getElementById('modalTitle').innerText = 'แก้ไขข้อมูลสมาชิก';
@@ -334,7 +336,8 @@ window.openModal = (mode, id = null) => {
             document.getElementById('joinDate').value = member.joinDate || '';
             
             document.getElementById('deposit').value = member.deposit || 0;
-            document.getElementById('trashIncome').value = member.trashIncome || 0; // ดึงค่าขายขยะมาแสดง
+            document.getElementById('trashIncome').value = member.trashIncome || 0; // ดึงยอดขยะสะสม
+            document.getElementById('todayTrash').value = 0; // เซ็ตยอดขยะวันนี้เป็น 0 เสมอรอรับค่าใหม่
             document.getElementById('withdraw').value = member.withdraw || 0;
             document.getElementById('deduction').value = member.deduction || 0;
             
@@ -352,7 +355,13 @@ memberForm.addEventListener('submit', async (e) => {
     const docId = document.getElementById('docId').value;
     const mId = document.getElementById('memberId').value;
     
+    // คำนวณก่อนส่งฐานข้อมูล
     calculateBalance();
+
+    // 💡 นำ (ขายขยะสะสม + ขายขยะวันนี้) มารวมกันเพื่ออัปเดตเป็นค่าสะสมใหม่
+    const tAccum = parseFloat(document.getElementById('trashIncome').value) || 0;
+    const tToday = parseFloat(document.getElementById('todayTrash').value) || 0;
+    const finalAccumulatedTrash = tAccum + tToday;
 
     const data = {
         memberId: mId,
@@ -361,7 +370,7 @@ memberForm.addEventListener('submit', async (e) => {
         community: document.getElementById('memberCommunity').value,
         joinDate: document.getElementById('joinDate').value,
         deposit: parseFloat(document.getElementById('deposit').value) || 0,
-        trashIncome: parseFloat(document.getElementById('trashIncome').value) || 0, // บันทึกค่าขายขยะ
+        trashIncome: finalAccumulatedTrash, // บันทึกยอดขยะสะสมตัวใหม่
         withdraw: parseFloat(document.getElementById('withdraw').value) || 0,
         deduction: parseFloat(document.getElementById('deduction').value) || 0,
         balance: parseFloat(document.getElementById('memberBalance').value) || 0, 
@@ -373,7 +382,7 @@ memberForm.addEventListener('submit', async (e) => {
         else if (mode === 'edit') { await updateDoc(doc(db, "members", docId), data); }
         
         closeModal();
-        alert('บันทึกข้อมูลเรียบร้อยแล้ว!');
+        alert('บันทึกข้อมูลและทบยอดขายขยะเรียบร้อยแล้ว!');
         fetchAdminMembers(); 
     } catch (error) { alert('เกิดข้อผิดพลาด: ' + error.message); }
 });
