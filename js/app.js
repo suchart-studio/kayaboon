@@ -39,15 +39,36 @@ function displayMembers(members) {
 
     members.forEach(data => {
         const statusColor = data.status === 'ปกติ' ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
+        
+        // การ์ดแสดงผลแบบใหม่ มีข้อมูลครบถ้วน
         const card = `
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
-                <div>
-                    <h3 class="font-bold text-gray-800 text-base">${data.name || 'ไม่มีชื่อ'}</h3>
-                    <p class="text-xs text-gray-400">รหัส: ${data.memberId || data.id}</p>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-base">${data.name || 'ไม่มีชื่อ'}</h3>
+                        <p class="text-xs text-gray-400">รหัส: ${data.memberId || data.id}</p>
+                        <p class="text-[10px] text-gray-400 mt-1">วันที่สมัคร: ${data.joinDate || '-'}</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] px-2 py-0.5 rounded-full ${statusColor}">${data.status || 'ไม่ระบุ'}</span>
+                        <div class="text-[10px] text-gray-500 mt-1">ยอดเงินคงเหลือ</div>
+                        <div class="font-bold text-xl text-blue-600 border-b border-blue-100 pb-1">฿${parseFloat(data.balance || 0).toLocaleString()}</div>
+                    </div>
                 </div>
-                <div class="text-right">
-                    <div class="font-bold text-lg text-blue-600">฿${parseFloat(data.balance || 0).toLocaleString()}</div>
-                    <span class="text-[10px] px-2 py-0.5 rounded-full ${statusColor}">${data.status || 'ไม่ระบุ'}</span>
+                
+                <div class="grid grid-cols-3 gap-2 text-center text-xs bg-gray-50 p-2 rounded-lg">
+                    <div>
+                        <p class="text-gray-500 mb-1">ฝากเงิน</p>
+                        <p class="text-green-600 font-bold">฿${parseFloat(data.deposit || 0).toLocaleString()}</p>
+                    </div>
+                    <div class="border-l border-r border-gray-200">
+                        <p class="text-gray-500 mb-1">ถอนเงิน</p>
+                        <p class="text-red-500 font-bold">฿${parseFloat(data.withdraw || 0).toLocaleString()}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 mb-1">หักฌาปนกิจ</p>
+                        <p class="text-orange-500 font-bold">฿${parseFloat(data.deduction || 0).toLocaleString()}</p>
+                    </div>
                 </div>
             </div>
         `;
@@ -65,7 +86,7 @@ searchInput.addEventListener('input', (e) => {
     displayMembers(filtered);
 });
 
-// นำเข้าข้อมูล
+// นำเข้าข้อมูล (ดักจับคอลัมน์ใหม่จาก CSV - ให้ปรับชื่อในวงเล็บ [] ให้ตรงกับหัวคอลัมน์ใน Google Sheet จริงของคุณ)
 document.getElementById('importDataBtn').addEventListener('click', () => {
     document.getElementById('importDataBtn').innerText = 'กำลังดึงข้อมูล...';
     Papa.parse(csvUrl, {
@@ -75,13 +96,19 @@ document.getElementById('importDataBtn').addEventListener('click', () => {
             const data = results.data;
             let count = 0;
             for(let row of data) {
-                if(!row['ชื่อ-สกุล']) continue; 
+                // ปรับให้ตรงกับหัวคอลัมน์ของ Sheet คุณ
+                const name = row['ชื่อ สกุล'] || row['ชื่อ-สกุล'] || row['ชื่อ-นามสกุล'];
+                if(!name) continue; 
                 
                 const memberData = {
-                    memberId: row['รหัสสมาชิก'] || String(Date.now() + count),
-                    name: row['ชื่อ-สกุล'] || '',
-                    status: row['สถานะ'] || 'ปกติ',
-                    balance: parseFloat(row['ยอดเงินคงเหลือ'] || 0)
+                    memberId: row['เลขสมาชิก'] || row['รหัสสมาชิก'] || String(Date.now() + count),
+                    name: name,
+                    joinDate: row['วันที่สมัคร'] || '',
+                    deposit: parseFloat(row['เงินฝาก'] || 0),
+                    withdraw: parseFloat(row['ถอนเงิน'] || 0),
+                    deduction: parseFloat(row['หักฌาปนกิจ'] || 0),
+                    balance: parseFloat(row['ยอดเงินคงเหลือ'] || 0),
+                    status: row['สถานะสมาชิก'] || row['สถานะ'] || 'ปกติ'
                 };
 
                 await setDoc(doc(db, "members", memberData.memberId), memberData);
