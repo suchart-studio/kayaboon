@@ -96,12 +96,22 @@ const depositInput = document.getElementById('deposit');
 const withdrawInput = document.getElementById('withdraw');
 const deductionInput = document.getElementById('deduction');
 const balanceInput = document.getElementById('memberBalance');
+const statusSelect = document.getElementById('memberStatus'); // ตัวเลือกสถานะ
 
 function calculateBalance() {
     const d = parseFloat(depositInput.value) || 0;
     const w = parseFloat(withdrawInput.value) || 0;
     const ded = parseFloat(deductionInput.value) || 0;
-    balanceInput.value = (d - w - ded).toFixed(2); // สูตร: ฝาก - ถอน - หัก
+    const currentBalance = d - w - ded;
+    
+    balanceInput.value = currentBalance.toFixed(2); // สูตร: ฝาก - ถอน - หัก
+
+    // 💡 เช็คยอดเงิน: มากกว่า 300 เป็นผ่านเกณฑ์ นอกนั้นไม่ผ่าน
+    if (currentBalance > 300) {
+        statusSelect.value = 'ผ่านเกณฑ์';
+    } else {
+        statusSelect.value = 'ไม่ผ่านเกณฑ์';
+    }
 }
 
 document.querySelectorAll('.calc-input').forEach(input => {
@@ -138,11 +148,14 @@ async function importExcelToFirebase(data) {
         const name = row['ชื่อ สกุล'] || row['ชื่อ-สกุล'] || row['ชื่อ-นามสกุล'];
         if(!name) continue; 
         
-        // บังคับคำนวณใหม่ตอนอัพโหลด ป้องกันกรอกไฟล์ Excel มาผิดสูตร
+        // บังคับคำนวณใหม่ตอนอัพโหลด
         const d = parseFloat(row['เงินฝาก'] || 0);
         const w = parseFloat(row['ถอนเงิน'] || 0);
         const ded = parseFloat(row['หักฌาปนกิจ'] || 0);
         const forceCalculatedBalance = d - w - ded;
+
+        // 💡 บังคับสถานะตามยอดเงินคงเหลือ (>300)
+        const autoStatus = forceCalculatedBalance > 300 ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
 
         const mId = String(row['เลขสมาชิก'] || row['รหัสสมาชิก'] || (Date.now() + count));
         const memberData = {
@@ -155,7 +168,7 @@ async function importExcelToFirebase(data) {
             withdraw: w,
             deduction: ded,
             balance: forceCalculatedBalance, 
-            status: String(row['สถานะสมาชิก'] || row['สถานะ'] || 'ผ่านเกณฑ์')
+            status: autoStatus // บันทึกสถานะตามที่คำนวณได้
         };
 
         const docRef = doc(db, "members", mId);
@@ -217,7 +230,7 @@ async function fetchAdminMembers() {
         if (querySnapshot.empty) {
             tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-gray-400">ยังไม่มีข้อมูลสมาชิก</td></tr>';
             document.getElementById('adminPaginationControls').classList.add('hidden');
-            updateAdminDashboardSummary([]); // อัพเดท Dashboard เป็น 0
+            updateAdminDashboardSummary([]); 
             return;
         }
 
@@ -225,7 +238,6 @@ async function fetchAdminMembers() {
             allMembers.push({ id: docSnap.id, ...docSnap.data() });
         });
 
-        // อัพเดท Dashboard ทุกครั้งที่โหลดข้อมูลเสร็จ
         updateAdminDashboardSummary(allMembers);
 
         filteredMembers = [...allMembers]; 
@@ -302,7 +314,7 @@ window.openModal = (mode, id = null) => {
         document.getElementById('memberId').readOnly = false;
         document.getElementById('docId').value = '';
         populateCommunities(""); 
-        calculateBalance(); // ให้ยอดเงินรีเซ็ตเป็น 0
+        calculateBalance(); // เรียกเพื่อให้คำนวณและตั้งสถานะเริ่มต้น
     } else if (mode === 'edit') {
         document.getElementById('modalTitle').innerText = 'แก้ไขข้อมูลสมาชิก';
         const member = allMembers.find(m => m.id === id);
@@ -317,8 +329,9 @@ window.openModal = (mode, id = null) => {
             document.getElementById('deposit').value = member.deposit || 0;
             document.getElementById('withdraw').value = member.withdraw || 0;
             document.getElementById('deduction').value = member.deduction || 0;
-            document.getElementById('memberBalance').value = member.balance || 0;
-            document.getElementById('memberStatus').value = (member.status === 'ผ่านเกณฑ์') ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
+            
+            // เรียกฟังก์ชันเพื่อคำนวณยอดเงินใหม่และเซ็ตสถานะให้ตรงกันทันที
+            calculateBalance(); 
         }
     }
     memberModal.classList.remove('hidden');
@@ -332,7 +345,7 @@ memberForm.addEventListener('submit', async (e) => {
     const docId = document.getElementById('docId').value;
     const mId = document.getElementById('memberId').value;
     
-    // บังคับคำนวณก่อนบันทึกเสมอ
+    // บังคับคำนวณก่อนบันทึกเสมอ เพื่อความชัวร์
     calculateBalance();
 
     const data = {
@@ -344,8 +357,8 @@ memberForm.addEventListener('submit', async (e) => {
         deposit: parseFloat(depositInput.value),
         withdraw: parseFloat(withdrawInput.value),
         deduction: parseFloat(deductionInput.value),
-        balance: parseFloat(balanceInput.value), // ค่าที่คำนวณได้
-        status: document.getElementById('memberStatus').value
+        balance: parseFloat(balanceInput.value), 
+        status: document.getElementById('memberStatus').value // จะถูกตั้งค่าตามกฏ > 300 อัตโนมัติแล้ว
     };
 
     try {
@@ -354,7 +367,7 @@ memberForm.addEventListener('submit', async (e) => {
         
         closeModal();
         alert('บันทึกข้อมูลเรียบร้อยแล้ว!');
-        fetchAdminMembers(); // โหลดข้อมูลใหม่และอัพเดทยอดรวมใน Dashboard ทันที
+        fetchAdminMembers(); 
     } catch (error) { alert('เกิดข้อผิดพลาด: ' + error.message); }
 });
 
@@ -362,7 +375,7 @@ window.deleteMember = async (id) => {
     if (confirm('ยืนยันการลบสมาชิกรายนี้?')) {
         try { 
             await deleteDoc(doc(db, "members", id)); 
-            fetchAdminMembers(); // โหลดข้อมูลใหม่และลดค่ายอดรวมทันที
+            fetchAdminMembers(); 
         }
         catch (error) { alert('ลบไม่สำเร็จ: ' + error.message); }
     }
