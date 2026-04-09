@@ -1,11 +1,15 @@
 import { db } from "./firebase-config.js";
-// 💡 เพิ่ม writeBatch เข้ามาใน import เพื่อใช้ลบข้อมูลจำนวนมากพร้อมกัน
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 const tableBody = document.getElementById('adminMemberTable');
 const memberModal = document.getElementById('memberModal');
 const memberForm = document.getElementById('memberForm');
+
+// 💡 ตัวแปรสำหรับ Pagination
 let allMembers = [];
+let filteredMembers = [];
+let currentPage = 1;
+const rowsPerPage = 50; // กำหนดหน้าละ 50 รายการ
 
 const communityData = {
     "1": ["โนนชัย 1", "โนนชัย 2", "โนนชัย 3", "ดอนหญ้านาง 1", "ดอนหญ้านาง 2", "ดอนหญ้านาง 3", "หลังศูนย์ราชการ 1", "หลังศูนย์ราชการ 2", "เทพารักษ์ 1", "เทพารักษ์ 2", "เทพารักษ์ 3", "เทพารักษ์ 4", "เทพารักษ์ 5", "พัฒนาเทพารักษ์", "เจ้าพ่อเกษม", "เจ้าพ่อทองสุข", "บขส"],
@@ -33,9 +37,6 @@ function populateCommunities(zoneValue, selectedCommunity = "") {
     }
 }
 
-// ----------------------------------------------------
-// ระบบนำเข้าข้อมูลผ่านไฟล์ Excel
-// ----------------------------------------------------
 document.getElementById('excelUpload').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -60,7 +61,6 @@ async function importExcelToFirebase(data) {
     tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-indigo-600 font-bold animate-pulse text-lg">กำลังอัพโหลดข้อมูล...</td></tr>';
     let count = 0;
     
-    // ใช้ Batch Write ให้โหลดเร็วขึ้น
     let batches = [];
     let batch = writeBatch(db);
     
@@ -87,7 +87,7 @@ async function importExcelToFirebase(data) {
         batch.set(docRef, memberData);
         count++;
 
-        if (count % 450 === 0) { // Firebase ยอมให้บันทึกสูงสุด 500 ต่อครั้ง
+        if (count % 450 === 0) {
             batches.push(batch.commit());
             batch = writeBatch(db);
         }
@@ -100,20 +100,13 @@ async function importExcelToFirebase(data) {
     fetchAdminMembers();
 }
 
-// ----------------------------------------------------
-// ฟังก์ชันล้างข้อมูลทั้งหมดใน Database
-// ----------------------------------------------------
 window.deleteAllMembers = async () => {
-    if (confirm('⚠️ คำเตือน!\nคุณแน่ใจหรือไม่ที่จะลบข้อมูลสมาชิก "ทั้งหมด" ในระบบ?\n(การกระทำนี้ไม่สามารถย้อนกลับได้)')) {
+    if (confirm('⚠️ คำเตือน!\nคุณแน่ใจหรือไม่ที่จะลบข้อมูลสมาชิก "ทั้งหมด" ในระบบ?')) {
         const pass = prompt('พิมพ์คำว่า "ยืนยันการลบ" เพื่อดำเนินการต่อ');
-        if (pass !== 'ยืนยันการลบ') {
-            alert('ยกเลิกการลบข้อมูล');
-            return;
-        }
+        if (pass !== 'ยืนยันการลบ') return alert('ยกเลิกการลบข้อมูล');
 
         try {
-            tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-red-600 font-bold animate-pulse text-lg">กำลังลบข้อมูลทั้งหมด กรุณารอสักครู่...</td></tr>';
-            
+            tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-red-600 font-bold animate-pulse text-lg">กำลังลบข้อมูลทั้งหมด...</td></tr>';
             const querySnapshot = await getDocs(collection(db, "members"));
             
             let batches = [];
@@ -123,26 +116,23 @@ window.deleteAllMembers = async () => {
             querySnapshot.forEach((docSnap) => {
                 batch.delete(docSnap.ref);
                 count++;
-                if (count === 490) { // ตัดทีละรอบ
+                if (count === 490) {
                     batches.push(batch.commit());
                     batch = writeBatch(db);
                     count = 0;
                 }
             });
             if (count > 0) batches.push(batch.commit());
-
             await Promise.all(batches);
-            alert('ลบข้อมูลสมาชิกทั้งหมดออกจากฐานข้อมูลเรียบร้อยแล้ว');
+
+            alert('ลบข้อมูลสมาชิกทั้งหมดเรียบร้อยแล้ว');
             fetchAdminMembers();
 
         } catch (error) {
             alert('เกิดข้อผิดพลาดในการลบ: ' + error.message);
-            fetchAdminMembers();
         }
     }
 };
-
-// ----------------------------------------------------
 
 const depositInput = document.getElementById('deposit');
 const withdrawInput = document.getElementById('withdraw');
@@ -168,29 +158,42 @@ async function fetchAdminMembers() {
         
         if (querySnapshot.empty) {
             tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-400">ยังไม่มีข้อมูลสมาชิก</td></tr>';
+            document.getElementById('adminPaginationControls').classList.add('hidden');
             return;
         }
 
         querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            allMembers.push({ id: docSnap.id, ...data });
+            allMembers.push({ id: docSnap.id, ...docSnap.data() });
         });
 
-        displayAdminTable(allMembers);
+        filteredMembers = [...allMembers]; // เริ่มต้นให้ข้อมูลค้นหา = ข้อมูลทั้งหมด
+        currentPage = 1;
+        displayAdminTable();
 
     } catch (error) {
         console.error("Error fetching data:", error);
     }
 }
 
-// 💡 สร้างตารางทีเดียวแบบก้อน HTML (แก้ปัญหาเว็บค้าง)
-function displayAdminTable(members) {
-    let htmlString = '';
+// 💡 ระบบแสดงผลตารางแบบตัดหน้า
+function displayAdminTable() {
+    tableBody.innerHTML = '';
+    const totalItems = filteredMembers.length;
     
-    // Admin อาจจะอยากดูข้อมูลเยอะหน่อย จึงตั้งลิมิตไว้ที่ 200 แถวแรก 
-    // หากค้นหาถึงจะแสดงคนที่ค้นหา
-    const displayData = members.slice(0, 200);
+    if (totalItems === 0) {
+        tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-400">ไม่พบข้อมูลที่ค้นหา</td></tr>';
+        document.getElementById('adminPaginationControls').classList.add('hidden');
+        return;
+    }
 
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const displayData = filteredMembers.slice(startIndex, endIndex);
+
+    let htmlString = '';
     displayData.forEach(member => {
         const statusClass = member.status === 'ปกติ' ? 'text-green-700 bg-green-100' : (member.status === 'พ้นสภาพ' ? 'text-red-700 bg-red-100' : 'text-gray-700 bg-gray-200');
         const commText = member.community ? `${member.community} (เขต ${member.zone})` : '-';
@@ -216,12 +219,28 @@ function displayAdminTable(members) {
         `;
     });
 
-    if (members.length > 200) {
-        htmlString += `<tr><td colspan="10" class="p-4 text-center text-gray-400">แสดงผล 200 รายการแรกจากทั้งหมด ${members.length} รายการ (โปรดพิมพ์ค้นหาเพื่อดูข้อมูลอื่นๆ)</td></tr>`;
-    }
-
     tableBody.innerHTML = htmlString;
+
+    // อัพเดทข้อมูลปุ่มแบ่งหน้า
+    document.getElementById('adminPaginationControls').classList.remove('hidden');
+    document.getElementById('adminPageInfo').innerText = `หน้า ${currentPage} จาก ${totalPages} (รวม ${totalItems} รายการ)`;
 }
+
+// 💡 ฟังก์ชันเปลี่ยนหน้า
+window.prevAdminPage = () => {
+    if (currentPage > 1) {
+        currentPage--;
+        displayAdminTable();
+    }
+};
+
+window.nextAdminPage = () => {
+    const totalPages = Math.ceil(filteredMembers.length / rowsPerPage);
+    if (currentPage < totalPages) {
+        currentPage++;
+        displayAdminTable();
+    }
+};
 
 window.openModal = (mode, id = null) => {
     document.getElementById('formMode').value = mode;
@@ -241,10 +260,8 @@ window.openModal = (mode, id = null) => {
             document.getElementById('memberId').value = member.memberId || id;
             document.getElementById('memberId').readOnly = true;
             document.getElementById('memberName').value = member.name;
-            
             document.getElementById('memberZone').value = member.zone || '';
             populateCommunities(member.zone || '', member.community || '');
-
             document.getElementById('joinDate').value = member.joinDate || '';
             document.getElementById('deposit').value = member.deposit || 0;
             document.getElementById('withdraw').value = member.withdraw || 0;
@@ -256,9 +273,7 @@ window.openModal = (mode, id = null) => {
     memberModal.classList.remove('hidden');
 };
 
-window.closeModal = () => {
-    memberModal.classList.add('hidden');
-};
+window.closeModal = () => { memberModal.classList.add('hidden'); };
 
 memberForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -282,45 +297,33 @@ memberForm.addEventListener('submit', async (e) => {
     };
 
     try {
-        if (mode === 'add') {
-            await setDoc(doc(db, "members", mId), data);
-            alert('เพิ่มสมาชิกสำเร็จ!');
-        } else if (mode === 'edit') {
-            await updateDoc(doc(db, "members", docId), data);
-            alert('อัปเดตข้อมูลสำเร็จ!');
-        }
+        if (mode === 'add') { await setDoc(doc(db, "members", mId), data); alert('เพิ่มสมาชิกสำเร็จ!'); }
+        else if (mode === 'edit') { await updateDoc(doc(db, "members", docId), data); alert('อัปเดตข้อมูลสำเร็จ!'); }
         closeModal();
         fetchAdminMembers();
-    } catch (error) {
-        alert('เกิดข้อผิดพลาด: ' + error.message);
-    }
+    } catch (error) { alert('เกิดข้อผิดพลาด: ' + error.message); }
 });
 
 window.deleteMember = async (id) => {
     if (confirm('ยืนยันการลบสมาชิกรายนี้?')) {
-        try {
-            await deleteDoc(doc(db, "members", id));
-            fetchAdminMembers();
-        } catch (error) {
-            alert('ลบไม่สำเร็จ: ' + error.message);
-        }
+        try { await deleteDoc(doc(db, "members", id)); fetchAdminMembers(); }
+        catch (error) { alert('ลบไม่สำเร็จ: ' + error.message); }
     }
 };
 
 document.getElementById('adminSearchInput').addEventListener('input', (e) => {
     const term = e.target.value.trim().toLowerCase();
-    
     if (term === '') {
-        displayAdminTable(allMembers);
-        return;
+        filteredMembers = [...allMembers];
+    } else {
+        filteredMembers = allMembers.filter(m => 
+            (m.name && m.name.toLowerCase().includes(term)) || 
+            (m.memberId && m.memberId.toLowerCase().includes(term)) ||
+            (m.community && m.community.toLowerCase().includes(term))
+        );
     }
-
-    const filtered = allMembers.filter(m => 
-        (m.name && m.name.toLowerCase().includes(term)) || 
-        (m.memberId && m.memberId.toLowerCase().includes(term)) ||
-        (m.community && m.community.toLowerCase().includes(term))
-    );
-    displayAdminTable(filtered);
+    currentPage = 1; // เมื่อค้นหาใหม่ ให้กลับไปหน้า 1 เสมอ
+    displayAdminTable();
 });
 
 fetchAdminMembers();
