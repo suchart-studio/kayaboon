@@ -75,7 +75,7 @@
                             <th class="p-4 font-semibold">ชื่อ-สกุล</th>
                             <th class="p-4 font-semibold">ชุมชน (เขต)</th>
                             <th class="p-4 font-semibold text-right">เงินฝาก</th>
-                            <th class="p-4 font-semibold text-right text-indigo-300">ค่าขายขยะ</th>
+                            <th class="p-4 font-semibold text-right text-indigo-300">ขายขยะสะสม</th>
                             <th class="p-4 font-semibold text-right">ถอนเงิน</th>
                             <th class="p-4 font-semibold text-right">หักฌาปนกิจ</th>
                             <th class="p-4 font-semibold text-right text-blue-300">คงเหลือ</th>
@@ -148,22 +148,26 @@
                 </div>
 
                 <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 shadow-inner">
-                    <h3 class="text-sm font-bold text-blue-600 mb-3">คำนวณยอดเงินอัตโนมัติ [(เงินฝาก + ค่าขายขยะ) - ถอนเงิน - หักฌาปนกิจ]</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <h3 class="text-sm font-bold text-blue-600 mb-3">คำนวณยอดเงินอัตโนมัติ [(ฝาก + ขยะสะสม + ขยะวันนี้) - ถอน - หัก]</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">เงินฝาก (บาท)</label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">เงินฝาก <span class="text-green-500">+</span></label>
                             <input type="number" id="deposit" step="0.01" value="0" class="calc-input w-full p-2 border border-green-300 rounded-lg text-green-700 font-bold focus:ring-green-500" required>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">ค่าขายขยะ (บาท) <span class="text-indigo-500">+</span></label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">ขายขยะสะสม <span class="text-indigo-500">+</span></label>
                             <input type="number" id="trashIncome" step="0.01" value="0" class="calc-input w-full p-2 border border-indigo-300 rounded-lg text-indigo-700 font-bold focus:ring-indigo-500" required>
                         </div>
+                        <div class="bg-blue-100 p-2 -m-2 rounded-lg border border-blue-200">
+                            <label class="block text-xs font-bold text-blue-800 mb-1">ขายขยะวันนี้ <span class="text-blue-600">+</span></label>
+                            <input type="number" id="todayTrash" step="0.01" value="0" class="calc-input w-full p-2 border-2 border-blue-400 bg-white rounded-lg text-blue-800 font-bold focus:ring-blue-500" required>
+                        </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">ถอนเงิน (บาท) <span class="text-red-500">-</span></label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">ถอนเงิน <span class="text-red-500">-</span></label>
                             <input type="number" id="withdraw" step="0.01" value="0" class="calc-input w-full p-2 border border-red-300 rounded-lg text-red-700 font-bold focus:ring-red-500" required>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">หักฌาปนกิจ (บาท) <span class="text-orange-500">-</span></label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">หักฌาปนกิจ <span class="text-orange-500">-</span></label>
                             <input type="number" id="deduction" step="0.01" value="0" class="calc-input w-full p-2 border border-orange-300 rounded-lg text-orange-700 font-bold focus:ring-orange-500" required>
                         </div>
                     </div>
@@ -175,7 +179,7 @@
 
                 <div class="flex space-x-3 mt-8">
                     <button type="button" onclick="closeModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-300 transition">ยกเลิก</button>
-                    <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-md">บันทึกข้อมูลและคำนวณยอดใหม่</button>
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-md">บันทึกข้อมูลและทบยอดขยะ</button>
                 </div>
             </form>
         </div>
