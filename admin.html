@@ -6,6 +6,7 @@
     <title>ระบบจัดการหลังบ้าน (Admin)</title>
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Chakra Petch', sans-serif; background-color: #f8fafc; }
     </style>
@@ -18,8 +19,15 @@
                 <h1 class="text-3xl font-bold text-gray-800">ระบบจัดการสมาชิก</h1>
                 <p class="text-sm text-gray-500 mt-1">กองทุนฌาปนกิจเปลี่ยนขยะเป็นบุญ เทศบาลนครขอนแก่น</p>
             </div>
-            <div class="space-x-3">
+            <div class="space-x-3 flex items-center">
                 <a href="index.html" target="_blank" class="bg-gray-100 text-gray-700 px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-gray-200 transition">ดูหน้าผู้ใช้</a>
+                
+                <label for="excelUpload" class="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-indigo-700 transition shadow-md cursor-pointer flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    อัพโหลด Excel / CSV
+                </label>
+                <input type="file" id="excelUpload" accept=".xlsx, .xls, .csv" class="hidden">
+
                 <button onclick="openModal('add')" class="bg-green-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition shadow-md">+ เพิ่มสมาชิกใหม่</button>
             </div>
         </header>
