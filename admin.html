@@ -12,7 +12,7 @@
 </head>
 <body class="p-8">
 
-    <div class="max-w-7xl mx-auto bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
+    <div class="max-w-[90rem] mx-auto bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
         <header class="flex justify-between items-center mb-8 border-b pb-4">
             <div>
                 <h1 class="text-3xl font-bold text-gray-800">ระบบจัดการสมาชิก</h1>
@@ -25,18 +25,22 @@
         </header>
 
         <div class="mb-6">
-            <input type="text" id="adminSearchInput" placeholder="ค้นหาชื่อ หรือ รหัสสมาชิก..." class="w-1/3 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-gray-50">
+            <input type="text" id="adminSearchInput" placeholder="ค้นหาชื่อ หรือ เลขสมาชิก..." class="w-1/3 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-gray-50">
         </div>
 
         <div class="overflow-x-auto rounded-xl border border-gray-200">
-            <table class="w-full text-left border-collapse">
+            <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead class="bg-slate-800 text-white">
                     <tr>
-                        <th class="p-4 font-semibold w-1/6">รหัสสมาชิก</th>
-                        <th class="p-4 font-semibold w-2/6">ชื่อ-นามสกุล</th>
-                        <th class="p-4 font-semibold text-center w-1/6">สถานะ</th>
-                        <th class="p-4 font-semibold text-right w-1/6">ยอดเงิน (บาท)</th>
-                        <th class="p-4 font-semibold text-center w-1/6">จัดการ</th>
+                        <th class="p-4 font-semibold">เลขสมาชิก</th>
+                        <th class="p-4 font-semibold">ชื่อ-สกุล</th>
+                        <th class="p-4 font-semibold">วันที่สมัคร</th>
+                        <th class="p-4 font-semibold text-right">เงินฝาก</th>
+                        <th class="p-4 font-semibold text-right">ถอนเงิน</th>
+                        <th class="p-4 font-semibold text-right">หักฌาปนกิจ</th>
+                        <th class="p-4 font-semibold text-right text-blue-300">คงเหลือ</th>
+                        <th class="p-4 font-semibold text-center">สถานะ</th>
+                        <th class="p-4 font-semibold text-center">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody id="adminMemberTable" class="divide-y divide-gray-200 text-sm">
@@ -46,34 +50,58 @@
     </div>
 
     <div id="memberModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-lg rounded-2xl p-8 shadow-2xl">
+        <div class="bg-white w-full max-w-2xl rounded-2xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h2 id="modalTitle" class="text-2xl font-bold mb-6 border-b pb-3 text-gray-800">จัดการข้อมูลสมาชิก</h2>
             <form id="memberForm">
-                <input type="hidden" id="formMode"> <input type="hidden" id="docId">
+                <input type="hidden" id="formMode"> 
+                <input type="hidden" id="docId">
                 
-                <div class="space-y-5">
+                <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">รหัสสมาชิก</label>
-                        <input type="text" id="memberId" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">เลขสมาชิก</label>
+                        <input type="text" id="memberId" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">ชื่อ-นามสกุล</label>
-                        <input type="text" id="memberName" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">วันที่สมัคร</label>
+                        <input type="date" id="joinDate" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required>
                     </div>
-                    <div class="flex space-x-4">
-                        <div class="flex-1">
-                            <label class="block text-sm font-bold text-gray-700 mb-1">สถานะ</label>
-                            <select id="memberStatus" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50">
-                                <option value="ปกติ">ปกติ</option>
-                                <option value="พ้นสภาพ">พ้นสภาพ</option>
-                            </select>
-                        </div>
-                        <div class="flex-1">
-                            <label class="block text-sm font-bold text-gray-700 mb-1">ยอดเงินคงเหลือ</label>
-                            <input type="number" id="memberBalance" step="0.01" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required>
-                        </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">ชื่อ-สกุล</label>
+                        <input type="text" id="memberName" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required>
                     </div>
                 </div>
+
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
+                    <h3 class="text-sm font-bold text-gray-600 mb-3">ข้อมูลทางการเงิน (ระบบจะคำนวณยอดคงเหลือให้อัตโนมัติ)</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">เงินฝาก (บาท)</label>
+                            <input type="number" id="deposit" step="0.01" value="0" class="calc-input w-full p-2 border border-green-300 rounded-lg text-green-700" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">ถอนเงิน (บาท)</label>
+                            <input type="number" id="withdraw" step="0.01" value="0" class="calc-input w-full p-2 border border-red-300 rounded-lg text-red-700" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">หักฌาปนกิจ (บาท)</label>
+                            <input type="number" id="deduction" step="0.01" value="0" class="calc-input w-full p-2 border border-orange-300 rounded-lg text-orange-700" required>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+                        <label class="block text-base font-bold text-gray-800">ยอดเงินคงเหลือรวม (บาท)</label>
+                        <input type="number" id="memberBalance" step="0.01" class="w-1/2 p-2 text-right border-2 border-blue-400 rounded-lg bg-blue-50 text-blue-700 font-bold text-lg" readonly>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">สถานะสมาชิก</label>
+                    <select id="memberStatus" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50">
+                        <option value="ปกติ">ปกติ</option>
+                        <option value="พ้นสภาพ">พ้นสภาพ</option>
+                        <option value="เสียชีวิต">เสียชีวิต</option>
+                    </select>
+                </div>
+
                 <div class="flex space-x-3 mt-8">
                     <button type="button" onclick="closeModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-300 transition">ยกเลิก</button>
                     <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-md">บันทึกข้อมูล</button>
