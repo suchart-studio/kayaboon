@@ -11,59 +11,77 @@
         body { font-family: 'Chakra Petch', sans-serif; background-color: #f8fafc; }
     </style>
 </head>
-<body class="p-8">
+<body class="bg-slate-50">
 
-    <div class="max-w-[95rem] mx-auto bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
-        <header class="flex flex-col md:flex-row justify-between items-center mb-8 border-b pb-4 space-y-4 md:space-y-0">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-800">ระบบจัดการสมาชิก</h1>
-                <p class="text-sm text-gray-500 mt-1">กองทุนฌาปนกิจเปลี่ยนขยะเป็นบุญ เทศบาลนครขอนแก่น</p>
+    <div id="loginOverlay" class="fixed inset-0 bg-slate-900 bg-opacity-95 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center border-t-4 border-blue-600">
+            <h2 class="text-2xl font-bold text-gray-800 mb-1">เข้าสู่ระบบผู้ดูแล</h2>
+            <p class="text-sm text-gray-500 mb-6">กองทุนฌาปนกิจเปลี่ยนขยะเป็นบุญ</p>
+            
+            <input type="password" id="adminPassword" placeholder="ใส่รหัสผ่าน..." class="w-full p-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-center mb-4 text-xl tracking-widest bg-gray-50">
+            
+            <button onclick="checkPassword()" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg text-lg">เข้าสู่ระบบ</button>
+            
+            <p id="loginError" class="text-red-500 text-sm mt-4 hidden bg-red-50 py-2 rounded-lg font-bold">❌ รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่</p>
+            
+            <a href="index.html" class="inline-block mt-6 text-sm text-gray-400 hover:text-gray-600 underline">กลับไปหน้าหลัก (ฝั่งผู้ใช้)</a>
+        </div>
+    </div>
+
+    <div id="adminContent" class="hidden p-8">
+        <div class="max-w-[95rem] mx-auto bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
+            <header class="flex flex-col md:flex-row justify-between items-center mb-8 border-b pb-4 space-y-4 md:space-y-0">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">ระบบจัดการสมาชิก</h1>
+                    <p class="text-sm text-gray-500 mt-1">กองทุนฌาปนกิจเปลี่ยนขยะเป็นบุญ เทศบาลนครขอนแก่น</p>
+                </div>
+                <div class="space-x-3 flex flex-wrap items-center">
+                    <a href="index.html" target="_blank" class="bg-gray-100 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-gray-200 transition">หน้าผู้ใช้</a>
+                    
+                    <button onclick="deleteAllMembers()" class="bg-red-500 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-red-600 transition shadow-md">ลบข้อมูลทั้งหมด</button>
+
+                    <label for="excelUpload" class="bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-indigo-700 transition shadow-md cursor-pointer flex items-center">
+                        อัพโหลด Excel
+                    </label>
+                    <input type="file" id="excelUpload" accept=".xlsx, .xls, .csv" class="hidden">
+
+                    <button onclick="openModal('add')" class="bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition shadow-md">+ เพิ่มสมาชิก</button>
+                    
+                    <button onclick="logoutAdmin()" class="bg-gray-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-gray-900 transition shadow-md">ออกจากระบบ</button>
+                </div>
+            </header>
+
+            <div class="mb-6">
+                <input type="text" id="adminSearchInput" placeholder="ค้นหาชื่อ, เลขสมาชิก หรือ ชุมชน..." class="w-1/3 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-gray-50">
             </div>
-            <div class="space-x-3 flex flex-wrap items-center">
-                <a href="index.html" target="_blank" class="bg-gray-100 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-gray-200 transition">หน้าผู้ใช้</a>
-                
-                <button onclick="deleteAllMembers()" class="bg-red-500 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-red-600 transition shadow-md">ลบข้อมูลทั้งหมด</button>
 
-                <label for="excelUpload" class="bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-indigo-700 transition shadow-md cursor-pointer flex items-center">
-                    อัพโหลด Excel
-                </label>
-                <input type="file" id="excelUpload" accept=".xlsx, .xls, .csv" class="hidden">
-
-                <button onclick="openModal('add')" class="bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 transition shadow-md">+ เพิ่มสมาชิก</button>
+            <div class="overflow-x-auto rounded-xl border border-gray-200">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="bg-slate-800 text-white">
+                        <tr>
+                            <th class="p-4 font-semibold">เลขสมาชิก</th>
+                            <th class="p-4 font-semibold">ชื่อ-สกุล</th>
+                            <th class="p-4 font-semibold">ชุมชน (เขต)</th>
+                            <th class="p-4 font-semibold">วันที่สมัคร</th>
+                            <th class="p-4 font-semibold text-right">เงินฝาก</th>
+                            <th class="p-4 font-semibold text-right">ถอนเงิน</th>
+                            <th class="p-4 font-semibold text-right">หักฌาปนกิจ</th>
+                            <th class="p-4 font-semibold text-right text-blue-300">คงเหลือ</th>
+                            <th class="p-4 font-semibold text-center">สถานะ</th>
+                            <th class="p-4 font-semibold text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminMemberTable" class="divide-y divide-gray-200 text-sm">
+                        </tbody>
+                </table>
             </div>
-        </header>
 
-        <div class="mb-6">
-            <input type="text" id="adminSearchInput" placeholder="ค้นหาชื่อ, เลขสมาชิก หรือ ชุมชน..." class="w-1/3 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-gray-50">
+            <div id="adminPaginationControls" class="flex justify-between items-center mt-6 p-4 bg-gray-50 border border-gray-200 rounded-xl hidden">
+                <button onclick="prevAdminPage()" class="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg font-bold transition shadow-sm">⬅️ ก่อนหน้า</button>
+                <span id="adminPageInfo" class="text-sm font-bold text-blue-700 bg-blue-100 px-4 py-2 rounded-lg">หน้า 1 / 1</span>
+                <button onclick="nextAdminPage()" class="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg font-bold transition shadow-sm">ถัดไป ➡️</button>
+            </div>
         </div>
-
-        <div class="overflow-x-auto rounded-xl border border-gray-200">
-            <table class="w-full text-left border-collapse whitespace-nowrap">
-                <thead class="bg-slate-800 text-white">
-                    <tr>
-                        <th class="p-4 font-semibold">เลขสมาชิก</th>
-                        <th class="p-4 font-semibold">ชื่อ-สกุล</th>
-                        <th class="p-4 font-semibold">ชุมชน (เขต)</th>
-                        <th class="p-4 font-semibold">วันที่สมัคร</th>
-                        <th class="p-4 font-semibold text-right">เงินฝาก</th>
-                        <th class="p-4 font-semibold text-right">ถอนเงิน</th>
-                        <th class="p-4 font-semibold text-right">หักฌาปนกิจ</th>
-                        <th class="p-4 font-semibold text-right text-blue-300">คงเหลือ</th>
-                        <th class="p-4 font-semibold text-center">สถานะ</th>
-                        <th class="p-4 font-semibold text-center">จัดการ</th>
-                    </tr>
-                </thead>
-                <tbody id="adminMemberTable" class="divide-y divide-gray-200 text-sm">
-                    </tbody>
-            </table>
-        </div>
-
-        <div id="adminPaginationControls" class="flex justify-between items-center mt-6 p-4 bg-gray-50 border border-gray-200 rounded-xl hidden">
-            <button onclick="prevAdminPage()" class="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg font-bold transition shadow-sm">⬅️ ก่อนหน้า</button>
-            <span id="adminPageInfo" class="text-sm font-bold text-blue-700 bg-blue-100 px-4 py-2 rounded-lg">หน้า 1 / 1</span>
-            <button onclick="nextAdminPage()" class="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg font-bold transition shadow-sm">ถัดไป ➡️</button>
-        </div>
-
     </div>
 
     <div id="memberModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
