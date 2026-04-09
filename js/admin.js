@@ -7,7 +7,7 @@ const memberForm = document.getElementById('memberForm');
 let allMembers = [];
 
 // ----------------------------------------------------
-// ข้อมูล เขต และ ชุมชน (Data Mapping)
+// ข้อมูล เขต และ ชุมชน (นำเข้าจากไฟล์ CSV)
 // ----------------------------------------------------
 const communityData = {
     "1": ["โนนชัย 1", "โนนชัย 2", "โนนชัย 3", "ดอนหญ้านาง 1", "ดอนหญ้านาง 2", "ดอนหญ้านาง 3", "หลังศูนย์ราชการ 1", "หลังศูนย์ราชการ 2", "เทพารักษ์ 1", "เทพารักษ์ 2", "เทพารักษ์ 3", "เทพารักษ์ 4", "เทพารักษ์ 5", "พัฒนาเทพารักษ์", "เจ้าพ่อเกษม", "เจ้าพ่อทองสุข", "บขส"],
@@ -16,13 +16,13 @@ const communityData = {
     "4": ["สามเหลี่ยม 1", "สามเหลี่ยม 2", "สามเหลี่ยม 3", "สามเหลี่ยม 4", "สามเหลี่ยม 5", "ศรีฐาน 1", "ศรีฐาน 2", "ศรีฐาน 3", "ศรีฐาน 4", "หนองแวงตราชู 1", "หนองแวงตราชู 2", "หนองแวงตราชู 3", "หนองแวงตราชู 4", "คุ้มวัดป่าอดุลยาราม", "ไทยสมุทร", "เทคโนภาค", "ตะวันใหม่", "มิตรภาพ", "ตลาดต้นตาล", "พนักงานเทศบาล"]
 };
 
-const zoneSelect = document.getElementById('memberZone');
 const communitySelect = document.getElementById('memberCommunity');
 
-// อัปเดตรายชื่อชุมชนเมื่อเลือกเขต
-zoneSelect.addEventListener('change', function() {
-    populateCommunities(this.value);
-});
+// ฟังก์ชันบังคับโหลดชุมชน ทำงานเมื่อคลิกเลือกเขต
+window.handleZoneChange = () => {
+    const zoneValue = document.getElementById('memberZone').value;
+    populateCommunities(zoneValue);
+};
 
 function populateCommunities(zoneValue, selectedCommunity = "") {
     communitySelect.innerHTML = '<option value="">-- เลือกชุมชน --</option>';
@@ -124,7 +124,7 @@ window.openModal = (mode, id = null) => {
             document.getElementById('memberId').readOnly = true;
             document.getElementById('memberName').value = member.name;
             
-            // Set เขต และ ชุมชน
+            // ตั้งค่า เขต และ ชุมชน ให้ตรงกับที่เคยบันทึกไว้
             document.getElementById('memberZone').value = member.zone || '';
             populateCommunities(member.zone || '', member.community || '');
 
