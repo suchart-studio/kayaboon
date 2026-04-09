@@ -1,5 +1,6 @@
 import { db } from "./firebase-config.js";
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+// 💡 เพิ่ม writeBatch เข้ามาใน import เพื่อใช้ลบข้อมูลจำนวนมากพร้อมกัน
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 const tableBody = document.getElementById('adminMemberTable');
 const memberModal = document.getElementById('memberModal');
@@ -33,7 +34,7 @@ function populateCommunities(zoneValue, selectedCommunity = "") {
 }
 
 // ----------------------------------------------------
-// ระบบนำเข้าข้อมูลผ่านไฟล์ Excel (.xlsx / .csv)
+// ระบบนำเข้าข้อมูลผ่านไฟล์ Excel
 // ----------------------------------------------------
 document.getElementById('excelUpload').addEventListener('change', function(e) {
     const file = e.target.files[0];
@@ -43,25 +44,28 @@ document.getElementById('excelUpload').addEventListener('change', function(e) {
     reader.onload = async function(e) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, {type: 'array'});
-        // ดึง Sheet แรก
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        // แปลงเป็น JSON
         const json = XLSX.utils.sheet_to_json(worksheet);
 
-        if(confirm(`พบข้อมูลสมาชิกจำนวน ${json.length} รายการ ต้องการนำเข้าสู่ฐานข้อมูลหรือไม่?\n(ข้อมูลที่มีรหัสเดิมจะถูกเขียนทับ)`)) {
+        if(confirm(`พบข้อมูลสมาชิกจำนวน ${json.length} รายการ ต้องการนำเข้าสู่ฐานข้อมูลหรือไม่?`)) {
             await importExcelToFirebase(json);
         }
-        document.getElementById('excelUpload').value = ''; // เคลียร์ไฟล์
+        document.getElementById('excelUpload').value = ''; 
     };
     reader.readAsArrayBuffer(file);
 });
 
 async function importExcelToFirebase(data) {
-    tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-indigo-600 font-bold animate-pulse text-lg">กำลังอัพโหลดข้อมูลเข้าสู่ระบบ กรุณารอสักครู่...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-indigo-600 font-bold animate-pulse text-lg">กำลังอัพโหลดข้อมูล...</td></tr>';
     let count = 0;
     
-    for(let row of data) {
+    // ใช้ Batch Write ให้โหลดเร็วขึ้น
+    let batches = [];
+    let batch = writeBatch(db);
+    
+    for(let i=0; i<data.length; i++) {
+        let row = data[i];
         const name = row['ชื่อ สกุล'] || row['ชื่อ-สกุล'] || row['ชื่อ-นามสกุล'];
         if(!name) continue; 
         
@@ -79,16 +83,65 @@ async function importExcelToFirebase(data) {
             status: String(row['สถานะสมาชิก'] || row['สถานะ'] || 'ปกติ')
         };
 
-        try {
-            await setDoc(doc(db, "members", mId), memberData);
-            count++;
-        } catch(e) {
-            console.error("Error adding doc:", e);
+        const docRef = doc(db, "members", mId);
+        batch.set(docRef, memberData);
+        count++;
+
+        if (count % 450 === 0) { // Firebase ยอมให้บันทึกสูงสุด 500 ต่อครั้ง
+            batches.push(batch.commit());
+            batch = writeBatch(db);
         }
     }
+    
+    if (count % 450 !== 0) batches.push(batch.commit());
+    await Promise.all(batches);
+    
     alert(`อัพโหลดและอัพเดทข้อมูลสำเร็จจำนวน ${count} รายการ!`);
     fetchAdminMembers();
 }
+
+// ----------------------------------------------------
+// ฟังก์ชันล้างข้อมูลทั้งหมดใน Database
+// ----------------------------------------------------
+window.deleteAllMembers = async () => {
+    if (confirm('⚠️ คำเตือน!\nคุณแน่ใจหรือไม่ที่จะลบข้อมูลสมาชิก "ทั้งหมด" ในระบบ?\n(การกระทำนี้ไม่สามารถย้อนกลับได้)')) {
+        const pass = prompt('พิมพ์คำว่า "ยืนยันการลบ" เพื่อดำเนินการต่อ');
+        if (pass !== 'ยืนยันการลบ') {
+            alert('ยกเลิกการลบข้อมูล');
+            return;
+        }
+
+        try {
+            tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-red-600 font-bold animate-pulse text-lg">กำลังลบข้อมูลทั้งหมด กรุณารอสักครู่...</td></tr>';
+            
+            const querySnapshot = await getDocs(collection(db, "members"));
+            
+            let batches = [];
+            let batch = writeBatch(db);
+            let count = 0;
+
+            querySnapshot.forEach((docSnap) => {
+                batch.delete(docSnap.ref);
+                count++;
+                if (count === 490) { // ตัดทีละรอบ
+                    batches.push(batch.commit());
+                    batch = writeBatch(db);
+                    count = 0;
+                }
+            });
+            if (count > 0) batches.push(batch.commit());
+
+            await Promise.all(batches);
+            alert('ลบข้อมูลสมาชิกทั้งหมดออกจากฐานข้อมูลเรียบร้อยแล้ว');
+            fetchAdminMembers();
+
+        } catch (error) {
+            alert('เกิดข้อผิดพลาดในการลบ: ' + error.message);
+            fetchAdminMembers();
+        }
+    }
+};
+
 // ----------------------------------------------------
 
 const depositInput = document.getElementById('deposit');
@@ -111,7 +164,6 @@ async function fetchAdminMembers() {
     tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
     try {
         const querySnapshot = await getDocs(collection(db, "members"));
-        tableBody.innerHTML = '';
         allMembers = [];
         
         if (querySnapshot.empty) {
@@ -122,37 +174,53 @@ async function fetchAdminMembers() {
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
             allMembers.push({ id: docSnap.id, ...data });
-            renderRow({ id: docSnap.id, ...data });
         });
+
+        displayAdminTable(allMembers);
+
     } catch (error) {
         console.error("Error fetching data:", error);
     }
 }
 
-function renderRow(member) {
-    const statusClass = member.status === 'ปกติ' ? 'text-green-700 bg-green-100' : (member.status === 'พ้นสภาพ' ? 'text-red-700 bg-red-100' : 'text-gray-700 bg-gray-200');
-    const commText = member.community ? `${member.community} (เขต ${member.zone})` : '-';
+// 💡 สร้างตารางทีเดียวแบบก้อน HTML (แก้ปัญหาเว็บค้าง)
+function displayAdminTable(members) {
+    let htmlString = '';
+    
+    // Admin อาจจะอยากดูข้อมูลเยอะหน่อย จึงตั้งลิมิตไว้ที่ 200 แถวแรก 
+    // หากค้นหาถึงจะแสดงคนที่ค้นหา
+    const displayData = members.slice(0, 200);
 
-    const row = `
-        <tr class="hover:bg-blue-50 transition-colors border-b border-gray-100">
-            <td class="p-4 font-mono text-gray-600">${member.memberId || member.id}</td>
-            <td class="p-4 font-bold text-gray-800">${member.name}</td>
-            <td class="p-4 text-blue-600 text-xs">${commText}</td>
-            <td class="p-4 text-gray-500 text-xs">${member.joinDate || '-'}</td>
-            <td class="p-4 text-right text-green-600">${parseFloat(member.deposit || 0).toLocaleString()}</td>
-            <td class="p-4 text-right text-red-500">${parseFloat(member.withdraw || 0).toLocaleString()}</td>
-            <td class="p-4 text-right text-orange-500">${parseFloat(member.deduction || 0).toLocaleString()}</td>
-            <td class="p-4 text-right font-bold text-blue-700">฿${parseFloat(member.balance || 0).toLocaleString()}</td>
-            <td class="p-4 text-center">
-                <span class="px-3 py-1 rounded-full text-xs font-bold ${statusClass}">${member.status}</span>
-            </td>
-            <td class="p-4 text-center space-x-3">
-                <button onclick="openModal('edit', '${member.id}')" class="text-blue-500 hover:text-blue-800 font-bold underline">แก้ไข</button>
-                <button onclick="deleteMember('${member.id}')" class="text-red-400 hover:text-red-700 font-bold underline">ลบ</button>
-            </td>
-        </tr>
-    `;
-    tableBody.insertAdjacentHTML('beforeend', row);
+    displayData.forEach(member => {
+        const statusClass = member.status === 'ปกติ' ? 'text-green-700 bg-green-100' : (member.status === 'พ้นสภาพ' ? 'text-red-700 bg-red-100' : 'text-gray-700 bg-gray-200');
+        const commText = member.community ? `${member.community} (เขต ${member.zone})` : '-';
+
+        htmlString += `
+            <tr class="hover:bg-blue-50 transition-colors border-b border-gray-100">
+                <td class="p-4 font-mono text-gray-600">${member.memberId || member.id}</td>
+                <td class="p-4 font-bold text-gray-800">${member.name}</td>
+                <td class="p-4 text-blue-600 text-xs">${commText}</td>
+                <td class="p-4 text-gray-500 text-xs">${member.joinDate || '-'}</td>
+                <td class="p-4 text-right text-green-600">${parseFloat(member.deposit || 0).toLocaleString()}</td>
+                <td class="p-4 text-right text-red-500">${parseFloat(member.withdraw || 0).toLocaleString()}</td>
+                <td class="p-4 text-right text-orange-500">${parseFloat(member.deduction || 0).toLocaleString()}</td>
+                <td class="p-4 text-right font-bold text-blue-700">฿${parseFloat(member.balance || 0).toLocaleString()}</td>
+                <td class="p-4 text-center">
+                    <span class="px-3 py-1 rounded-full text-xs font-bold ${statusClass}">${member.status}</span>
+                </td>
+                <td class="p-4 text-center space-x-3">
+                    <button onclick="openModal('edit', '${member.id}')" class="text-blue-500 hover:text-blue-800 font-bold underline">แก้ไข</button>
+                    <button onclick="deleteMember('${member.id}')" class="text-red-400 hover:text-red-700 font-bold underline">ลบ</button>
+                </td>
+            </tr>
+        `;
+    });
+
+    if (members.length > 200) {
+        htmlString += `<tr><td colspan="10" class="p-4 text-center text-gray-400">แสดงผล 200 รายการแรกจากทั้งหมด ${members.length} รายการ (โปรดพิมพ์ค้นหาเพื่อดูข้อมูลอื่นๆ)</td></tr>`;
+    }
+
+    tableBody.innerHTML = htmlString;
 }
 
 window.openModal = (mode, id = null) => {
@@ -240,14 +308,19 @@ window.deleteMember = async (id) => {
 };
 
 document.getElementById('adminSearchInput').addEventListener('input', (e) => {
-    const term = e.target.value.toLowerCase();
-    tableBody.innerHTML = '';
+    const term = e.target.value.trim().toLowerCase();
+    
+    if (term === '') {
+        displayAdminTable(allMembers);
+        return;
+    }
+
     const filtered = allMembers.filter(m => 
         (m.name && m.name.toLowerCase().includes(term)) || 
         (m.memberId && m.memberId.toLowerCase().includes(term)) ||
         (m.community && m.community.toLowerCase().includes(term))
     );
-    filtered.forEach(renderRow);
+    displayAdminTable(filtered);
 });
 
 fetchAdminMembers();
