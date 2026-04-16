@@ -82,10 +82,9 @@ function displayMembers() {
         const isPassed = data.status === 'ผ่านเกณฑ์';
         const statusColor = isPassed ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
         
-        // เช็คเงื่อนไขย่อยเพื่อแสดงเครื่องหมายถูก/ผิด ให้ชาวบ้านดู
+        // 💡 เช็คเงื่อนไขย่อยใหม่ (เหลือ 2 ข้อที่ใช้ผ่านเกณฑ์)
         const cond1 = parseFloat(data.balance || 0) >= 300;
-        const cond2 = parseFloat(data.trash6Months || 0) > 0;
-        const cond3 = (data.benefitStatus || 'ยังไม่รับสิทธิ์') === 'ยังไม่รับสิทธิ์';
+        const cond2 = (data.benefitStatus || 'ยังไม่รับสิทธิ์') === 'ยังไม่รับสิทธิ์';
 
         const zoneText = data.zone ? `(เขต ${data.zone})` : '';
         const commText = data.community || '-';
@@ -112,15 +111,16 @@ function displayMembers() {
                             ${cond1 ? '✅' : '❌'} ยอดเงินคงเหลือ 300 บ. ขึ้นไป
                         </li>
                         <li class="${cond2 ? 'text-green-600' : 'text-red-500'}">
-                            ${cond2 ? '✅' : '❌'} มีประวัติขายขยะ 6 เดือน (฿${parseFloat(data.trash6Months || 0).toLocaleString()})
-                        </li>
-                        <li class="${cond3 ? 'text-green-600' : 'text-red-500'}">
-                            ${cond3 ? '✅' : '❌'} สถานะ: ${data.benefitStatus || 'ยังไม่รับสิทธิ์'}
+                            ${cond2 ? '✅' : '❌'} สถานะ: ${data.benefitStatus || 'ยังไม่รับสิทธิ์'}
                         </li>
                     </ul>
+                    <div class="mt-2 pt-2 border-t border-gray-200 text-[10px] text-gray-600 font-medium flex justify-between">
+                        <span>📦 ประวัติขายขยะ 6 เดือน:</span>
+                        <span class="font-bold text-yellow-600">฿${parseFloat(data.trash6Months || 0).toLocaleString()}</span>
+                    </div>
                 </div>
                 
-                <div class="grid grid-cols-4 gap-1 text-center text-[10px] sm:text-xs bg-gray-50 p-2 rounded-lg">
+                <div class="grid grid-cols-4 gap-1 text-center text-[10px] sm:text-xs bg-gray-50 p-2 rounded-lg border border-gray-100">
                     <div>
                         <p class="text-gray-500 mb-1">ฝากเงิน</p>
                         <p class="text-green-600 font-bold">฿${parseFloat(data.deposit || 0).toLocaleString()}</p>
