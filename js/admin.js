@@ -1,5 +1,5 @@
 import { db } from "./firebase-config.js";
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch, addDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 const tableBody = document.getElementById('adminMemberTable');
 const memberModal = document.getElementById('memberModal');
@@ -10,6 +10,8 @@ let filteredMembers = [];
 let currentPage = 1;
 const rowsPerPage = 50; 
 
+// ----------------------------------------------------
+// ระบบ Login ผู้ดูแล
 // ----------------------------------------------------
 const loginOverlay = document.getElementById('loginOverlay');
 const adminContent = document.getElementById('adminContent');
@@ -45,7 +47,8 @@ window.logoutAdmin = () => {
 };
 
 // ----------------------------------------------------
-
+// ข้อมูลชุมชน และการจัดการ Dropdown
+// ----------------------------------------------------
 const communityData = {
     "1": ["โนนชัย 1", "โนนชัย 2", "โนนชัย 3", "ดอนหญ้านาง 1", "ดอนหญ้านาง 2", "ดอนหญ้านาง 3", "หลังศูนย์ราชการ 1", "หลังศูนย์ราชการ 2", "เทพารักษ์ 1", "เทพารักษ์ 2", "เทพารักษ์ 3", "เทพารักษ์ 4", "เทพารักษ์ 5", "พัฒนาเทพารักษ์", "เจ้าพ่อเกษม", "เจ้าพ่อทองสุข", "บขส"],
     "2": ["หนองใหญ่ 1", "หนองใหญ่ 2", "หนองใหญ่ 3", "หนองใหญ่ 4", "บะขาม", "ศรีจันทร์ประชา", "นาคะประเวศน์", "คุ้มพระลับ", "ชัยณรงค์สามัคคี", "ธารทิพย์", "หน้า รพ.ศูนย์ฯ", "หลักเมือง", "บ้านเลขที่ 37", "ทุ่งเศรษฐี", "ศิริมงคล", "ศรีจันทร์พัฒนา", "มิตรสัมพันธ์1", "มิตรสัมพันธ์2", "ทุ่งสร้างพัฒนา", "โพธิบัลลังค์ทอง", "บ้านพัก ตชด", "หัวสะพานสัมพันธ์", "ชลประทาน", "เจ้าพ่อขุนภักดี", "ธนาคร", "คุ้มหนองคู", "ศรีจันทร์", "ตรีเทพนครขอนแก่น"],
@@ -89,7 +92,7 @@ function updateAdminDashboardSummary(members) {
 }
 
 // ----------------------------------------------------
-// 💡 สูตรคำนวณและรวมยอดขยะแยกประเภท
+// สูตรคำนวณและรวมยอดขยะแยกประเภท
 // ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
 const trashIncomeInput = document.getElementById('trashIncome'); 
@@ -195,7 +198,6 @@ async function importExcelToFirebase(data) {
             trash6Months: t6m,
             benefitStatus: bStatus,
             status: autoStatus,
-            // เตรียมฟิลด์ขยะแยกประเภทไว้ให้เผื่อเริ่มใช้จาก Excel ได้เลย
             accumGlass: 0,
             accumPaper: 0,
             accumPlastic: 0,
@@ -253,6 +255,9 @@ window.deleteAllMembers = async () => {
     }
 };
 
+// ----------------------------------------------------
+// การแสดงผลตาราง และ Pagination
+// ----------------------------------------------------
 async function fetchAdminMembers() {
     tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
     try {
@@ -341,6 +346,9 @@ window.nextAdminPage = () => {
     if (currentPage < totalPages) { currentPage++; displayAdminTable(); }
 };
 
+// ----------------------------------------------------
+// ระบบจัดการฟอร์ม (Modal)
+// ----------------------------------------------------
 window.openModal = (mode, id = null) => {
     document.getElementById('formMode').value = mode;
 
@@ -400,6 +408,9 @@ window.openModal = (mode, id = null) => {
 
 window.closeModal = () => { memberModal.classList.add('hidden'); };
 
+// ----------------------------------------------------
+// การบันทึกข้อมูล (บันทึก Profile + Transaction)
+// ----------------------------------------------------
 memberForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const mode = document.getElementById('formMode').value;
@@ -434,7 +445,7 @@ memberForm.addEventListener('submit', async (e) => {
         benefitStatus: document.getElementById('benefitStatus').value,
         status: document.getElementById('memberStatus').value,
         
-        // บันทึกยอดขยะสะสมแยกประเภทลงฐานข้อมูล
+        // บันทึกยอดขยะสะสมแยกประเภทลงฐานข้อมูลโปรไฟล์
         accumGlass: finalGlass,
         accumPaper: finalPaper,
         accumPlastic: finalPlastic,
@@ -443,15 +454,37 @@ memberForm.addEventListener('submit', async (e) => {
     };
 
     try {
+        // 1. บันทึกข้อมูลโปรไฟล์สมาชิก
         if (mode === 'add') { await setDoc(doc(db, "members", mId), data); }
         else if (mode === 'edit') { await updateDoc(doc(db, "members", docId), data); }
         
+        // 2. บันทึกประวัติการทำรายการ (Transaction) เฉพาะกรณีที่มียอดขยะวันนี้ > 0
+        if (tToday > 0) {
+            await addDoc(collection(db, "transactions"), {
+                memberId: mId,
+                name: document.getElementById('memberName').value,
+                community: document.getElementById('memberCommunity').value,
+                timestamp: new Date().toISOString(),
+                trashGlass: parseFloat(document.getElementById('trashGlass').value) || 0,
+                trashPaper: parseFloat(document.getElementById('trashPaper').value) || 0,
+                trashPlastic: parseFloat(document.getElementById('trashPlastic').value) || 0,
+                trashMetal: parseFloat(document.getElementById('trashMetal').value) || 0,
+                trashOther: parseFloat(document.getElementById('trashOther').value) || 0,
+                totalIncome: tToday
+            });
+        }
+
         closeModal();
         alert('บันทึกข้อมูลเรียบร้อยแล้ว!');
         fetchAdminMembers(); 
-    } catch (error) { alert('เกิดข้อผิดพลาด: ' + error.message); }
+    } catch (error) { 
+        alert('เกิดข้อผิดพลาด: ' + error.message); 
+    }
 });
 
+// ----------------------------------------------------
+// ระบบลบ และค้นหาสมาชิก
+// ----------------------------------------------------
 window.deleteMember = async (id) => {
     if (confirm('ยืนยันการลบสมาชิกรายนี้?')) {
         try { 
