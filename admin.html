@@ -16,7 +16,7 @@
     <div id="loginOverlay" class="fixed inset-0 bg-slate-900 bg-opacity-95 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
         <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center border-t-4 border-blue-600">
             <h2 class="text-2xl font-bold text-gray-800 mb-1">เข้าสู่ระบบผู้ดูแล</h2>
-            <p class="text-sm text-gray-500 mb-6">กองทุนฌาปนกิจเปลี่ยนขยะเป็นบุญ</p>
+            <p class="text-sm text-gray-500 mb-6">เปลี่ยนขยะเป็นบุญ</p>
             <input type="password" id="adminPassword" placeholder="ใส่รหัสผ่าน..." class="w-full p-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-center mb-4 text-xl tracking-widest bg-gray-50">
             <button onclick="checkPassword()" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg text-lg">เข้าสู่ระบบ</button>
             <p id="loginError" class="text-red-500 text-sm mt-4 hidden bg-red-50 py-2 rounded-lg font-bold">❌ รหัสผ่านไม่ถูกต้อง</p>
@@ -125,7 +125,7 @@
                         <label class="block text-sm font-bold text-gray-700 mb-1">เขต</label>
                         <select id="memberZone" onchange="handleZoneChange()" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50" required>
                             <option value="">-- เลือกเขต --</option>
-                            <option value="0">เทศบาล</option>
+                            <option value="0">เขต 0</option>
                             <option value="1">เขต 1</option>
                             <option value="2">เขต 2</option>
                             <option value="3">เขต 3</option>
