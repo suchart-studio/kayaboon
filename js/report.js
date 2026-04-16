@@ -1,88 +1,55 @@
 import { db } from "./firebase-config.js";
 import { collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
+// ข้อมูลชุมชนที่ฝังอยู่ในระบบ
+const communityData = {
+    "0": ["พนักงานเทศบาล"],
+    "1": ["โนนชัย 1", "โนนชัย 2", "โนนชัย 3", "ดอนหญ้านาง 1", "ดอนหญ้านาง 2", "ดอนหญ้านาง 3", "หลังศูนย์ราชการ 1", "หลังศูนย์ราชการ 2", "เทพารักษ์ 1", "เทพารักษ์ 2", "เทพารักษ์ 3", "เทพารักษ์ 4", "เทพารักษ์ 5", "พัฒนาเทพารักษ์", "เจ้าพ่อเกษม", "เจ้าพ่อทองสุข", "บขส"],
+    "2": ["หนองใหญ่ 1", "หนองใหญ่ 2", "หนองใหญ่ 3", "หนองใหญ่ 4", "บ้านบะขาม", "ศรีจันทร์ประชา", "นาคะประเวศน์", "คุ้มพระลับ", "ชัยณรงค์-สามัคคี", "ธารทิพย์", "หน้า รพ.ศูนย์", "หลักเมือง", "บ้านเลขที่ 37", "ทุ่งเศรษฐี", "ศิริมงคล", "ศรีจันทร์พัฒนา", "มิตรสัมพันธ์ 1", "มิตรสัมพันธ์ 2", "ทุ่งสร้างพัฒนา", "โพธิบัลลังค์ทอง", "บ้านพัก ตชด", "หัวสะพานสัมพันธ์", "ชลประทาน", "เจ้าพ่อขุนภักดี", "ธนาคร", "คุ้มหนองคู", "ศรีจันทร์", "ตรีเทพนครขอนแก่น"],
+    "3": ["บ้านตูม", "เมืองเก่า 1", "เมืองเก่า 2", "เมืองเก่า 3", "เมืองเก่า 4", "คุ้มวัดกลาง", "คุ้มวัดธาตุ", "หลังสนามกีฬา 1", "หลังสนามกีฬา 2", "แก่นนคร", "กศน.", "โนนหนองวัด 1", "โนนหนองวัด 2", "โนนหนองวัด 3", "โนนหนองวัด 4", "หนองวัดพัฒนา", "คุ้มวุฒาราม", "โนนทัน1", "โนนทัน2", "โนนทัน3", "โนนทัน4", "โนนทัน5", "โนนทัน 6", "โนนทัน7", "โนนทัน8", "โนนทัน9", "การเคหะ", "เหล่านาดี12", "พระนครศรีบริรักษ์", "พิมานชลร่วมใจ", "95 ก้าวหน้านคร"],
+    "4": ["สามเหลี่ยม 1", "สามเหลี่ยม 2", "สามเหลี่ยม 3", "สามเหลี่ยม 4", "สามเหลี่ยม 5", "ศรีฐาน 1", "ศรีฐาน 2", "ศรีฐาน 3", "ศรีฐาน 4", "หนองแวงตราชู 1", "หนองแวงตราชู 2", "หนองแวงตราชู 3", "หนองแวงตราชู 4", "คุ้มวัดป่าอดุลยาราม", "ไทยสมุทร", "เทคโนภาค", "ตะวันใหม่", "มิตรภาพ", "ตลาดต้นตาล"]
+};
+
 let allTransactions = [];
-let allCommunities = []; // ตัวแปรเก็บรายชื่อชุมชนทั้งหมดจากลิงก์ CSV
+let allCommunities = [];
 let chartInstance = null;
 
-// ลิงก์ CSV ฐานข้อมูลชุมชนที่คุณต้องการ
-const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRhHC9IbuGx_FaOXsTN5fByehHU9vMe0nMC4QB5K-A1sM5_ePe-R1J0ecfo7Qx4XQOyHWJf0lv4k9Jv/pub?output=csv";
+// ดึงชื่อชุมชนทั้งหมดมารวมกันและเรียงตามตัวอักษร
+for (let zone in communityData) {
+    allCommunities = allCommunities.concat(communityData[zone]);
+}
+allCommunities = [...new Set(allCommunities)].sort();
 
-// Element References
 const filterYear = document.getElementById('filterYear');
 const filterMonth = document.getElementById('filterMonth');
 const filterCommunity = document.getElementById('filterCommunity');
 const tableBody = document.getElementById('transactionTable');
 const communitySummaryTable = document.getElementById('communitySummaryTable');
 
-// ฟังก์ชันดึงรายชื่อชุมชนจาก CSV (เพื่อตั้งโครงตารางรอไว้เลยแม้ไม่มีข้อมูล)
-async function fetchCommunitiesFromCSV() {
-    try {
-        const res = await fetch(csvUrl);
-        const arrayBuffer = await res.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, {type: 'array'});
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet);
-        
-        const communities = [];
-        json.forEach(row => {
-            // ระบบจะพยายามค้นหาคอลัมน์ที่เป็น "ชื่อชุมชน"
-            let commName = row['ชุมชน'] || row['ชื่อชุมชน'] || row['ชุมชน/หมู่บ้าน'] || Object.values(row)[0]; 
-            
-            // กรณีคอลัมน์แรกเป็นตัวเลขลำดับ (No.) ให้ดึงคอลัมน์ที่ 2 แทน
-            if (commName && !isNaN(commName) && Object.values(row).length > 1) {
-                commName = Object.values(row)[1];
-            }
+// นำรายชื่อไปใส่ใน Dropdown
+allCommunities.forEach(c => {
+    filterCommunity.innerHTML += `<option value="${c}">${c}</option>`;
+});
 
-            if (commName && String(commName).trim() !== '') {
-                communities.push(String(commName).trim());
-            }
-        });
-        
-        // ลบชื่อที่ซ้ำกัน และเรียงตามตัวอักษร
-        allCommunities = [...new Set(communities)].sort();
-
-        // นำรายชื่อชุมชนทั้งหมดไปใส่ใน Dropdown ตัวกรอง
-        allCommunities.forEach(c => {
-            filterCommunity.innerHTML += `<option value="${c}">${c}</option>`;
-        });
-
-    } catch (err) {
-        console.error("Error fetching CSV communities:", err);
-    }
-}
-
-// โหลดข้อมูล Transaction จาก Firebase
-async function fetchTransactionsFromFirebase() {
-    const q = query(collection(db, "transactions"), orderBy("timestamp", "desc"));
-    const querySnapshot = await getDocs(q);
-    
-    allTransactions = [];
-    querySnapshot.forEach((doc) => {
-        allTransactions.push({ id: doc.id, ...doc.data() });
-    });
-}
-
-// เริ่มโหลดข้อมูลทั้งหมดพร้อมกัน
 async function loadData() {
     tableBody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-500 font-bold animate-pulse">กำลังโหลดข้อมูลรายงาน...</td></tr>';
-    communitySummaryTable.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-gray-500 font-bold animate-pulse">กำลังตรวจสอบรายชื่อชุมชน...</td></tr>';
     
     try {
-        await Promise.all([
-            fetchCommunitiesFromCSV(),
-            fetchTransactionsFromFirebase()
-        ]);
+        const q = query(collection(db, "transactions"), orderBy("timestamp", "desc"));
+        const querySnapshot = await getDocs(q);
         
-        applyFilters(); // เมื่อโหลดเสร็จให้ทำการคำนวณและแสดงผล
+        allTransactions = [];
+        querySnapshot.forEach((doc) => {
+            allTransactions.push({ id: doc.id, ...doc.data() });
+        });
+        
+        applyFilters(); 
     } catch (error) {
         console.error("Error loading data:", error);
         tableBody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
     }
 }
 
-// ฟังก์ชันกรองข้อมูลตาม เดือน/ปี
 function applyFilters() {
     const fYear = filterYear.value;
     const fMonth = filterMonth.value;
@@ -91,7 +58,7 @@ function applyFilters() {
         if (!t.timestamp) return false;
         const dateObj = new Date(t.timestamp);
         const tYear = dateObj.getFullYear().toString();
-        const tMonth = String(dateObj.getMonth() + 1).padStart(2, '0'); // เดือน 01-12
+        const tMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
 
         const matchYear = (fYear === 'all') || (tYear === fYear);
         const matchMonth = (fMonth === 'all') || (tMonth === fMonth);
@@ -102,9 +69,7 @@ function applyFilters() {
     updateDashboard(filtered);
 }
 
-// ฟังก์ชันอัพเดตหน้าจอทั้งหมด (ตารางชุมชน, ตารางประวัติ, ตัวเลข, กราฟ)
 function updateDashboard(data) {
-    // 1. เตรียมโครงสร้างบัญชีของทุกชุมชนให้เป็น 0 ไว้ก่อน
     const summaryByComm = {};
     allCommunities.forEach(c => {
         summaryByComm[c] = { glass: 0, paper: 0, plastic: 0, metal: 0, other: 0, total: 0 };
@@ -113,11 +78,9 @@ function updateDashboard(data) {
     let sumTotal = 0, sumGlass = 0, sumPaper = 0, sumPlastic = 0, sumMetal = 0, sumOther = 0;
     let transactionHTML = '';
 
-    // 2. นำข้อมูลที่มีการขายจริงมาบวกเพิ่มในแต่ละชุมชน
     data.forEach(t => {
         const c = (t.community || 'ไม่ระบุชุมชน').trim();
         
-        // ถ้าบังเอิญมีชื่อชุมชนที่ไม่ได้อยู่ใน CSV โผล่มา ให้สร้างรองรับไว้
         if (!summaryByComm[c]) {
             summaryByComm[c] = { glass: 0, paper: 0, plastic: 0, metal: 0, other: 0, total: 0 };
         }
@@ -136,7 +99,6 @@ function updateDashboard(data) {
         summaryByComm[c].other += other;
         summaryByComm[c].total += income;
 
-        // รวมยอดสถิติใหญ่ด้านบน
         sumTotal += income;
         sumGlass += glass;
         sumPaper += paper;
@@ -145,13 +107,11 @@ function updateDashboard(data) {
         sumOther += other;
     });
 
-    // 3. กรองตารางตามที่ผู้ใช้เลือกใน Dropdown "ชุมชน"
     const fComm = filterCommunity.value;
     
-    // สร้างตารางสรุป "ทุกชุมชน"
     let summaryHTML = '';
     Object.keys(summaryByComm).sort().forEach(commName => {
-        if (fComm !== 'all' && commName !== fComm) return; // ซ่อนถ้าผู้ใช้เลือกดูเฉพาะชุมชนใดชุมชนหนึ่ง
+        if (fComm !== 'all' && commName !== fComm) return; 
         
         const s = summaryByComm[commName];
         summaryHTML += `
@@ -172,8 +132,6 @@ function updateDashboard(data) {
     }
     communitySummaryTable.innerHTML = summaryHTML;
 
-    // 4. สร้างตาราง "ประวัติการทำรายการ" (Transactions log)
-    // กรองประวัติให้ตรงกับชุมชนที่เลือกด้วย
     const logData = data.filter(t => fComm === 'all' || (t.community || '').trim() === fComm);
     
     if (logData.length === 0) {
@@ -196,22 +154,18 @@ function updateDashboard(data) {
     }
     tableBody.innerHTML = transactionHTML;
 
-    // อัพเดตตัวเลขแสดงผลใหญ่ด้านบนสุด (สรุปตามเงื่อนไขทั้งหมด)
     document.getElementById('sumTotal').innerText = `฿${sumTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     document.getElementById('sumGlass').innerText = sumGlass.toLocaleString();
     document.getElementById('sumPaper').innerText = sumPaper.toLocaleString();
     document.getElementById('sumPlastic').innerText = sumPlastic.toLocaleString();
     document.getElementById('sumMetalOther').innerText = (sumMetal + sumOther).toLocaleString();
     
-    // วาดกราฟ
     renderChart([sumGlass, sumPaper, sumPlastic, sumMetal, sumOther]);
 }
 
-// ฟังก์ชันสร้างกราฟโดนัท (Doughnut Chart)
 function renderChart(chartData) {
     const ctx = document.getElementById('trashChart').getContext('2d');
     
-    // ลบกราฟเก่าทิ้งก่อนวาดใหม่
     if (chartInstance) { chartInstance.destroy(); }
     
     const isEmpty = chartData.every(val => val === 0);
@@ -223,7 +177,7 @@ function renderChart(chartData) {
             datasets: [{
                 data: isEmpty ? [1] : chartData,
                 backgroundColor: isEmpty 
-                    ? ['#e2e8f0']  // ถ้าว่างจะโชว์สีเทา
+                    ? ['#e2e8f0']  
                     : ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#8b5cf6'],
                 borderWidth: 0,
                 hoverOffset: 4
@@ -240,10 +194,8 @@ function renderChart(chartData) {
     });
 }
 
-// ผูก Event ให้ทำงานเมื่อมีการเลือกเปลี่ยนเงื่อนไข (เดือน, ปี, ชุมชน)
 filterYear.addEventListener('change', applyFilters);
 filterMonth.addEventListener('change', applyFilters);
 filterCommunity.addEventListener('change', applyFilters);
 
-// เริ่มโหลดข้อมูลครั้งแรกที่เปิดหน้า
 loadData();
