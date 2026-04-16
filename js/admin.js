@@ -89,7 +89,7 @@ function updateAdminDashboardSummary(members) {
 }
 
 // ----------------------------------------------------
-// 💡 สูตรคำนวณและตั้งค่าสถานะ (เอาขยะ 6 เดือนออกจากการประเมิน)
+// 💡 สูตรคำนวณและรวมยอดขยะแยกประเภท
 // ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
 const trashIncomeInput = document.getElementById('trashIncome'); 
@@ -102,9 +102,19 @@ const benefitStatusInput = document.getElementById('benefitStatus');
 const statusInput = document.getElementById('memberStatus');
 
 function calculateBalance() {
+    // รวมยอดขยะวันนี้ จาก 5 ประเภท
+    const tGlass = parseFloat(document.getElementById('trashGlass').value) || 0;
+    const tPaper = parseFloat(document.getElementById('trashPaper').value) || 0;
+    const tPlastic = parseFloat(document.getElementById('trashPlastic').value) || 0;
+    const tMetal = parseFloat(document.getElementById('trashMetal').value) || 0;
+    const tOther = parseFloat(document.getElementById('trashOther').value) || 0;
+
+    const tToday = tGlass + tPaper + tPlastic + tMetal + tOther;
+    todayTrashInput.value = tToday.toFixed(2);
+
+    // คำนวณยอดคงเหลือทั้งหมด
     const d = parseFloat(depositInput.value) || 0;
     const tAccum = parseFloat(trashIncomeInput.value) || 0;
-    const tToday = parseFloat(todayTrashInput.value) || 0;
     const w = parseFloat(withdrawInput.value) || 0;
     const ded = parseFloat(deductionInput.value) || 0;
     
@@ -113,7 +123,6 @@ function calculateBalance() {
 
     const bStatus = benefitStatusInput.value;
 
-    // 💡 สถานะผ่านเกณฑ์ = เงิน >= 300 และ ยังไม่รับสิทธิ์
     if (currentBalance >= 300 && bStatus === 'ยังไม่รับสิทธิ์') {
         statusInput.value = 'ผ่านเกณฑ์';
         statusInput.className = "w-full p-2 text-center border-2 border-green-500 rounded-lg bg-green-100 text-green-700 font-bold";
@@ -169,7 +178,6 @@ async function importExcelToFirebase(data) {
         const t6m = parseFloat(row['ขายขยะใน 6 เดือน'] || row['ขยะ 6 เดือน'] || 0);
         const bStatus = String(row['รับสิทธิ์'] || row['สถานะรับสิทธิ์'] || 'ยังไม่รับสิทธิ์').trim();
 
-        // 💡 อัพเดทสถานะสำหรับไฟล์ Excel ให้เหลือแค่ 2 เงื่อนไข
         const autoStatus = (forceCalculatedBalance >= 300 && bStatus === 'ยังไม่รับสิทธิ์') ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
 
         const mId = String(row['เลขสมาชิก'] || row['รหัสสมาชิก'] || (Date.now() + count));
@@ -186,7 +194,13 @@ async function importExcelToFirebase(data) {
             balance: forceCalculatedBalance, 
             trash6Months: t6m,
             benefitStatus: bStatus,
-            status: autoStatus 
+            status: autoStatus,
+            // เตรียมฟิลด์ขยะแยกประเภทไว้ให้เผื่อเริ่มใช้จาก Excel ได้เลย
+            accumGlass: 0,
+            accumPaper: 0,
+            accumPlastic: 0,
+            accumMetal: 0,
+            accumOther: 0
         };
 
         const docRef = doc(db, "members", mId);
@@ -330,6 +344,11 @@ window.nextAdminPage = () => {
 window.openModal = (mode, id = null) => {
     document.getElementById('formMode').value = mode;
 
+    // เคลียร์ช่องขยะวันนี้ให้เป็น 0 ทุกครั้งที่เปิดฟอร์ม
+    ['trashGlass', 'trashPaper', 'trashPlastic', 'trashMetal', 'trashOther', 'todayTrash'].forEach(field => {
+        document.getElementById(field).value = 0;
+    });
+
     if (mode === 'add') {
         document.getElementById('modalTitle').innerText = 'เพิ่มสมาชิกใหม่';
         memberForm.reset();
@@ -337,9 +356,13 @@ window.openModal = (mode, id = null) => {
         document.getElementById('docId').value = '';
         populateCommunities(""); 
         
-        document.getElementById('todayTrash').value = 0; 
         document.getElementById('trash6Months').value = 0;
         document.getElementById('benefitStatus').value = 'ยังไม่รับสิทธิ์';
+
+        // รีเซ็ตตัวแปรเก็บสะสมเดิมเป็น 0
+        ['oldGlass', 'oldPaper', 'oldPlastic', 'oldMetal', 'oldOther'].forEach(field => {
+            document.getElementById(field).value = 0;
+        });
         
         calculateBalance(); 
     } else if (mode === 'edit') {
@@ -356,12 +379,18 @@ window.openModal = (mode, id = null) => {
             
             document.getElementById('deposit').value = member.deposit || 0;
             document.getElementById('trashIncome').value = member.trashIncome || 0;
-            document.getElementById('todayTrash').value = 0; 
             document.getElementById('withdraw').value = member.withdraw || 0;
             document.getElementById('deduction').value = member.deduction || 0;
             
             document.getElementById('trash6Months').value = member.trash6Months || 0;
             document.getElementById('benefitStatus').value = member.benefitStatus || 'ยังไม่รับสิทธิ์';
+
+            // ดึงค่าสะสมเดิมมาเก็บในตัวแปรซ่อน
+            document.getElementById('oldGlass').value = member.accumGlass || 0;
+            document.getElementById('oldPaper').value = member.accumPaper || 0;
+            document.getElementById('oldPlastic').value = member.accumPlastic || 0;
+            document.getElementById('oldMetal').value = member.accumMetal || 0;
+            document.getElementById('oldOther').value = member.accumOther || 0;
             
             calculateBalance(); 
         }
@@ -383,6 +412,13 @@ memberForm.addEventListener('submit', async (e) => {
     const tToday = parseFloat(document.getElementById('todayTrash').value) || 0;
     const finalAccumulatedTrash = tAccum + tToday;
 
+    // คำนวณยอดสะสมแยกประเภทใหม่ = ยอดเดิมในระบบ + ยอดที่กรอกวันนี้
+    const finalGlass = parseFloat(document.getElementById('oldGlass').value) + (parseFloat(document.getElementById('trashGlass').value) || 0);
+    const finalPaper = parseFloat(document.getElementById('oldPaper').value) + (parseFloat(document.getElementById('trashPaper').value) || 0);
+    const finalPlastic = parseFloat(document.getElementById('oldPlastic').value) + (parseFloat(document.getElementById('trashPlastic').value) || 0);
+    const finalMetal = parseFloat(document.getElementById('oldMetal').value) + (parseFloat(document.getElementById('trashMetal').value) || 0);
+    const finalOther = parseFloat(document.getElementById('oldOther').value) + (parseFloat(document.getElementById('trashOther').value) || 0);
+
     const data = {
         memberId: mId,
         name: document.getElementById('memberName').value,
@@ -396,7 +432,14 @@ memberForm.addEventListener('submit', async (e) => {
         balance: parseFloat(document.getElementById('memberBalance').value) || 0, 
         trash6Months: parseFloat(document.getElementById('trash6Months').value) || 0,
         benefitStatus: document.getElementById('benefitStatus').value,
-        status: document.getElementById('memberStatus').value 
+        status: document.getElementById('memberStatus').value,
+        
+        // บันทึกยอดขยะสะสมแยกประเภทลงฐานข้อมูล
+        accumGlass: finalGlass,
+        accumPaper: finalPaper,
+        accumPlastic: finalPlastic,
+        accumMetal: finalMetal,
+        accumOther: finalOther
     };
 
     try {
