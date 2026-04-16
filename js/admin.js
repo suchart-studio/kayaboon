@@ -11,8 +11,6 @@ let currentPage = 1;
 const rowsPerPage = 50; 
 
 // ----------------------------------------------------
-// ระบบ Login
-// ----------------------------------------------------
 const loginOverlay = document.getElementById('loginOverlay');
 const adminContent = document.getElementById('adminContent');
 const loginError = document.getElementById('loginError');
@@ -91,7 +89,7 @@ function updateAdminDashboardSummary(members) {
 }
 
 // ----------------------------------------------------
-// 💡 สูตรคำนวณและตั้งค่าสถานะจาก 3 เงื่อนไข
+// 💡 สูตรคำนวณและตั้งค่าสถานะ (เอาขยะ 6 เดือนออกจากการประเมิน)
 // ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
 const trashIncomeInput = document.getElementById('trashIncome'); 
@@ -100,7 +98,6 @@ const withdrawInput = document.getElementById('withdraw');
 const deductionInput = document.getElementById('deduction');
 const balanceInput = document.getElementById('memberBalance');
 
-const trash6MonthsInput = document.getElementById('trash6Months');
 const benefitStatusInput = document.getElementById('benefitStatus');
 const statusInput = document.getElementById('memberStatus');
 
@@ -111,16 +108,13 @@ function calculateBalance() {
     const w = parseFloat(withdrawInput.value) || 0;
     const ded = parseFloat(deductionInput.value) || 0;
     
-    // คำนวณเงินคงเหลือ
     const currentBalance = (d + tAccum + tToday) - w - ded;
     balanceInput.value = currentBalance.toFixed(2); 
 
-    // ดึงค่าเงื่อนไขที่เหลือ
-    const t6m = parseFloat(trash6MonthsInput.value) || 0;
     const bStatus = benefitStatusInput.value;
 
-    // ประเมินสถานะจาก 3 เงื่อนไข
-    if (currentBalance >= 300 && t6m > 0 && bStatus === 'ยังไม่รับสิทธิ์') {
+    // 💡 สถานะผ่านเกณฑ์ = เงิน >= 300 และ ยังไม่รับสิทธิ์
+    if (currentBalance >= 300 && bStatus === 'ยังไม่รับสิทธิ์') {
         statusInput.value = 'ผ่านเกณฑ์';
         statusInput.className = "w-full p-2 text-center border-2 border-green-500 rounded-lg bg-green-100 text-green-700 font-bold";
     } else {
@@ -172,12 +166,11 @@ async function importExcelToFirebase(data) {
         const ded = parseFloat(row['หักฌาปนกิจ'] || 0);
         const forceCalculatedBalance = (d + t) - w - ded;
 
-        // ดึงค่า 2 คอลัมน์ใหม่
         const t6m = parseFloat(row['ขายขยะใน 6 เดือน'] || row['ขยะ 6 เดือน'] || 0);
         const bStatus = String(row['รับสิทธิ์'] || row['สถานะรับสิทธิ์'] || 'ยังไม่รับสิทธิ์').trim();
 
-        // ประเมินสถานะ 3 เงื่อนไขสำหรับ Excel
-        const autoStatus = (forceCalculatedBalance >= 300 && t6m > 0 && bStatus === 'ยังไม่รับสิทธิ์') ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
+        // 💡 อัพเดทสถานะสำหรับไฟล์ Excel ให้เหลือแค่ 2 เงื่อนไข
+        const autoStatus = (forceCalculatedBalance >= 300 && bStatus === 'ยังไม่รับสิทธิ์') ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
 
         const mId = String(row['เลขสมาชิก'] || row['รหัสสมาชิก'] || (Date.now() + count));
         const memberData = {
@@ -363,11 +356,10 @@ window.openModal = (mode, id = null) => {
             
             document.getElementById('deposit').value = member.deposit || 0;
             document.getElementById('trashIncome').value = member.trashIncome || 0;
-            document.getElementById('todayTrash').value = 0; // เซ็ตเป็น 0 เพื่อรอรับค่าใหม่
+            document.getElementById('todayTrash').value = 0; 
             document.getElementById('withdraw').value = member.withdraw || 0;
             document.getElementById('deduction').value = member.deduction || 0;
             
-            // ฟิลด์ใหม่ 2 ตัว
             document.getElementById('trash6Months').value = member.trash6Months || 0;
             document.getElementById('benefitStatus').value = member.benefitStatus || 'ยังไม่รับสิทธิ์';
             
@@ -385,7 +377,6 @@ memberForm.addEventListener('submit', async (e) => {
     const docId = document.getElementById('docId').value;
     const mId = document.getElementById('memberId').value;
     
-    // ประมวลผลรอบสุดท้าย
     calculateBalance();
 
     const tAccum = parseFloat(document.getElementById('trashIncome').value) || 0;
@@ -399,7 +390,7 @@ memberForm.addEventListener('submit', async (e) => {
         community: document.getElementById('memberCommunity').value,
         joinDate: document.getElementById('joinDate').value,
         deposit: parseFloat(document.getElementById('deposit').value) || 0,
-        trashIncome: finalAccumulatedTrash, // ทบยอดอัตโนมัติ
+        trashIncome: finalAccumulatedTrash, 
         withdraw: parseFloat(document.getElementById('withdraw').value) || 0,
         deduction: parseFloat(document.getElementById('deduction').value) || 0,
         balance: parseFloat(document.getElementById('memberBalance').value) || 0, 
