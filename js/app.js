@@ -79,23 +79,45 @@ function displayMembers() {
 
     let htmlString = '';
     displayData.forEach(data => {
-        const statusColor = data.status === 'ผ่านเกณฑ์' ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
+        const isPassed = data.status === 'ผ่านเกณฑ์';
+        const statusColor = isPassed ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
+        
+        // เช็คเงื่อนไขย่อยเพื่อแสดงเครื่องหมายถูก/ผิด ให้ชาวบ้านดู
+        const cond1 = parseFloat(data.balance || 0) >= 300;
+        const cond2 = parseFloat(data.trash6Months || 0) > 0;
+        const cond3 = (data.benefitStatus || 'ยังไม่รับสิทธิ์') === 'ยังไม่รับสิทธิ์';
+
         const zoneText = data.zone ? `(เขต ${data.zone})` : '';
         const commText = data.community || '-';
 
         htmlString += `
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border ${isPassed ? 'border-green-200' : 'border-gray-200'} relative mb-4">
                 <div class="flex justify-between items-start mb-3">
                     <div>
-                        <h3 class="font-bold text-gray-800 text-base">${data.name || 'ไม่มีชื่อ'}</h3>
+                        <h3 class="font-bold text-gray-800 text-lg">${data.name || 'ไม่มีชื่อ'}</h3>
                         <p class="text-xs text-gray-400">รหัส: ${data.memberId || data.id}</p>
                         <p class="text-xs text-blue-600 mt-1">📍 ชุมชน${commText} ${zoneText}</p>
                     </div>
                     <div class="text-right">
-                        <span class="text-[10px] px-2 py-0.5 rounded-full ${statusColor}">${data.status || 'ไม่ระบุ'}</span>
-                        <div class="text-[10px] text-gray-500 mt-1">ยอดเงินคงเหลือ</div>
-                        <div class="font-bold text-xl text-blue-600 border-b border-blue-100 pb-1">฿${parseFloat(data.balance || 0).toLocaleString()}</div>
+                        <span class="text-xs px-3 py-1 rounded-full font-bold ${statusColor}">${data.status || 'ไม่ระบุ'}</span>
+                        <div class="text-[10px] text-gray-500 mt-2">ยอดเงินคงเหลือ</div>
+                        <div class="font-bold text-2xl text-blue-600">฿${parseFloat(data.balance || 0).toLocaleString()}</div>
                     </div>
+                </div>
+
+                <div class="bg-gray-50 p-2 rounded-lg mb-3 border border-gray-100">
+                    <p class="text-[10px] text-gray-500 font-bold mb-1 border-b pb-1">เงื่อนไขการผ่านเกณฑ์:</p>
+                    <ul class="text-[11px] space-y-1">
+                        <li class="${cond1 ? 'text-green-600' : 'text-red-500'}">
+                            ${cond1 ? '✅' : '❌'} ยอดเงินคงเหลือ 300 บ. ขึ้นไป
+                        </li>
+                        <li class="${cond2 ? 'text-green-600' : 'text-red-500'}">
+                            ${cond2 ? '✅' : '❌'} มีประวัติขายขยะ 6 เดือน (฿${parseFloat(data.trash6Months || 0).toLocaleString()})
+                        </li>
+                        <li class="${cond3 ? 'text-green-600' : 'text-red-500'}">
+                            ${cond3 ? '✅' : '❌'} สถานะ: ${data.benefitStatus || 'ยังไม่รับสิทธิ์'}
+                        </li>
+                    </ul>
                 </div>
                 
                 <div class="grid grid-cols-4 gap-1 text-center text-[10px] sm:text-xs bg-gray-50 p-2 rounded-lg">
