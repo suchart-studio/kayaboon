@@ -11,6 +11,8 @@ let currentPage = 1;
 const rowsPerPage = 50; 
 
 // ----------------------------------------------------
+// ระบบ Login ผู้ดูแล
+// ----------------------------------------------------
 const loginOverlay = document.getElementById('loginOverlay');
 const adminContent = document.getElementById('adminContent');
 const loginError = document.getElementById('loginError');
@@ -45,14 +47,40 @@ window.logoutAdmin = () => {
 };
 
 // ----------------------------------------------------
-// 💡 ข้อมูลชุมชนอัพเดทใหม่ตามไฟล์แนบ (ไม่ต้องพึ่ง CSV)
+// ข้อมูลชุมชน อิงตามไฟล์ข้อความ (ชื่อชุมชน.txt) ครบ 100%
 // ----------------------------------------------------
 const communityData = {
-    "0": ["พนักงานเทศบาล"],
-    "1": ["โนนชัย 1", "โนนชัย 2", "โนนชัย 3", "ดอนหญ้านาง 1", "ดอนหญ้านาง 2", "ดอนหญ้านาง 3", "หลังศูนย์ราชการ 1", "หลังศูนย์ราชการ 2", "เทพารักษ์ 1", "เทพารักษ์ 2", "เทพารักษ์ 3", "เทพารักษ์ 4", "เทพารักษ์ 5", "พัฒนาเทพารักษ์", "เจ้าพ่อเกษม", "เจ้าพ่อทองสุข", "บขส"],
-    "2": ["หนองใหญ่ 1", "หนองใหญ่ 2", "หนองใหญ่ 3", "หนองใหญ่ 4", "บ้านบะขาม", "ศรีจันทร์ประชา", "นาคะประเวศน์", "คุ้มพระลับ", "ชัยณรงค์-สามัคคี", "ธารทิพย์", "หน้า รพ.ศูนย์", "หลักเมือง", "บ้านเลขที่ 37", "ทุ่งเศรษฐี", "ศิริมงคล", "ศรีจันทร์พัฒนา", "มิตรสัมพันธ์ 1", "มิตรสัมพันธ์ 2", "ทุ่งสร้างพัฒนา", "โพธิบัลลังค์ทอง", "บ้านพัก ตชด", "หัวสะพานสัมพันธ์", "ชลประทาน", "เจ้าพ่อขุนภักดี", "ธนาคร", "คุ้มหนองคู", "ศรีจันทร์", "ตรีเทพนครขอนแก่น"],
-    "3": ["บ้านตูม", "เมืองเก่า 1", "เมืองเก่า 2", "เมืองเก่า 3", "เมืองเก่า 4", "คุ้มวัดกลาง", "คุ้มวัดธาตุ", "หลังสนามกีฬา 1", "หลังสนามกีฬา 2", "แก่นนคร", "กศน.", "โนนหนองวัด 1", "โนนหนองวัด 2", "โนนหนองวัด 3", "โนนหนองวัด 4", "หนองวัดพัฒนา", "คุ้มวุฒาราม", "โนนทัน1", "โนนทัน2", "โนนทัน3", "โนนทัน4", "โนนทัน5", "โนนทัน 6", "โนนทัน7", "โนนทัน8", "โนนทัน9", "การเคหะ", "เหล่านาดี12", "พระนครศรีบริรักษ์", "พิมานชลร่วมใจ", "95 ก้าวหน้านคร"],
-    "4": ["สามเหลี่ยม 1", "สามเหลี่ยม 2", "สามเหลี่ยม 3", "สามเหลี่ยม 4", "สามเหลี่ยม 5", "ศรีฐาน 1", "ศรีฐาน 2", "ศรีฐาน 3", "ศรีฐาน 4", "หนองแวงตราชู 1", "หนองแวงตราชู 2", "หนองแวงตราชู 3", "หนองแวงตราชู 4", "คุ้มวัดป่าอดุลยาราม", "ไทยสมุทร", "เทคโนภาค", "ตะวันใหม่", "มิตรภาพ", "ตลาดต้นตาล"]
+    "0": [
+        "พนักงานเทศบาล"
+    ],
+    "1": [
+        "โนนชัย 1", "โนนชัย 2", "โนนชัย 3", "ดอนหญ้านาง 1", "ดอนหญ้านาง 2", 
+        "ดอนหญ้านาง 3", "หลังศูนย์ราชการ 1", "หลังศูนย์ราชการ 2", "เทพารักษ์ 1", 
+        "เทพารักษ์ 2", "เทพารักษ์ 3", "เทพารักษ์ 4", "เทพารักษ์ 5", "พัฒนาเทพารักษ์", 
+        "เจ้าพ่อเกษม", "เจ้าพ่อทองสุข", "บขส"
+    ],
+    "2": [
+        "หนองใหญ่ 1", "หนองใหญ่ 2", "หนองใหญ่ 3", "หนองใหญ่ 4", "บ้านบะขาม", 
+        "ศรีจันทร์ประชา", "นาคะประเวศน์", "คุ้มพระลับ", "ชัยณรงค์-สามัคคี", "ธารทิพย์", 
+        "หน้า รพ. ศูนย์", "หลักเมือง", "บ้านเลขที่ 37", "ทุ่งเศรษฐี", "ศิริมงคล", 
+        "ศรีจันทร์พัฒนา", "มิตรสัมพันธ์ 1", "มิตรสัมพันธ์ 2", "ทุ่งสร้างพัฒนา", 
+        "โพธิบัลลังค์ทอง", "บ้านพัก ตชด", "หัวสะพานสัมพันธ์", "ชลประทาน", 
+        "เจ้าพ่อขุนภักดี", "ธนาคร", "คุ้มหนองคู", "ศรีจันทร์", "ตรีเทพนครขอนแก่น"
+    ],
+    "3": [
+        "บ้านตูม", "เมืองเก่า 1", "เมืองเก่า 2", "เมืองเก่า 3", "เมืองเก่า 4", 
+        "คุ้มวัดกลาง", "คุ้มวัดธาตุ", "หลังสนามกีฬา 1", "หลังสนามกีฬา 2", "แก่นนคร", 
+        "กศน.", "โนนหนองวัด 1", "โนนหนองวัด 2", "โนนหนองวัด 3", "โนนหนองวัด 4", 
+        "หนองวัดพัฒนา", "คุ้มวุฒาราม", "โนนทัน1", "โนนทัน2", "โนนทัน3", 
+        "โนนทัน4", "โนนทัน5", "โนนทัน 6", "โนนทัน7", "โนนทัน8", "โนนทัน9", 
+        "การเคหะ", "เหล่านาดี12", "พระนครศรีบริรักษ์", "พิมานชลร่วมใจ", "95 ก้าวหน้านคร"
+    ],
+    "4": [
+        "สามเหลี่ยม 1", "สามเหลี่ยม 2", "สามเหลี่ยม 3", "สามเหลี่ยม 4", "สามเหลี่ยม 5", 
+        "ศรีฐาน 1", "ศรีฐาน 2", "ศรีฐาน 3", "ศรีฐาน 4", "หนองแวงตราชู 1", 
+        "หนองแวงตราชู 2", "หนองแวงตราชู 3", "หนองแวงตราชู 4", "คุ้มวัดป่าอดุลยาราม", 
+        "ไทยสมุทร", "เทคโนภาค", "ตะวันใหม่", "มิตรภาพ", "ตลาดต้นตาล"
+    ]
 };
 
 const communitySelect = document.getElementById('memberCommunity');
@@ -91,6 +119,8 @@ function updateAdminDashboardSummary(members) {
 }
 
 // ----------------------------------------------------
+// สูตรคำนวณเงินคงเหลือ การแยกประเภทขยะ และสถานะ 
+// ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
 const trashIncomeInput = document.getElementById('trashIncome'); 
 const todayTrashInput = document.getElementById('todayTrash');   
@@ -102,6 +132,7 @@ const benefitStatusInput = document.getElementById('benefitStatus');
 const statusInput = document.getElementById('memberStatus');
 
 function calculateBalance() {
+    // 1. รวมยอดขยะวันนี้ จาก 5 ประเภท
     const tGlass = parseFloat(document.getElementById('trashGlass').value) || 0;
     const tPaper = parseFloat(document.getElementById('trashPaper').value) || 0;
     const tPlastic = parseFloat(document.getElementById('trashPlastic').value) || 0;
@@ -111,6 +142,7 @@ function calculateBalance() {
     const tToday = tGlass + tPaper + tPlastic + tMetal + tOther;
     todayTrashInput.value = tToday.toFixed(2);
 
+    // 2. คำนวณยอดคงเหลือทั้งหมด
     const d = parseFloat(depositInput.value) || 0;
     const tAccum = parseFloat(trashIncomeInput.value) || 0;
     const w = parseFloat(withdrawInput.value) || 0;
@@ -119,6 +151,7 @@ function calculateBalance() {
     const currentBalance = (d + tAccum + tToday) - w - ded;
     balanceInput.value = currentBalance.toFixed(2); 
 
+    // 3. ประเมินสถานะ 2 เงื่อนไข
     const bStatus = benefitStatusInput.value;
 
     if (currentBalance >= 300 && bStatus === 'ยังไม่รับสิทธิ์') {
@@ -136,7 +169,7 @@ document.querySelectorAll('.calc-input').forEach(input => {
 });
 
 // ----------------------------------------------------
-// ระบบ Excel
+// ระบบนำเข้าข้อมูล Excel (Upload Excel)
 // ----------------------------------------------------
 document.getElementById('excelUpload').addEventListener('change', function(e) {
     const file = e.target.files[0];
@@ -250,6 +283,9 @@ window.deleteAllMembers = async () => {
     }
 };
 
+// ----------------------------------------------------
+// โหลดข้อมูลและแสดงผลในตาราง
+// ----------------------------------------------------
 async function fetchAdminMembers() {
     tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
     try {
@@ -338,9 +374,13 @@ window.nextAdminPage = () => {
     if (currentPage < totalPages) { currentPage++; displayAdminTable(); }
 };
 
+// ----------------------------------------------------
+// จัดการหน้าต่าง Form (Modal)
+// ----------------------------------------------------
 window.openModal = (mode, id = null) => {
     document.getElementById('formMode').value = mode;
 
+    // เคลียร์ช่องป้อนขยะวันนี้เป็น 0 เสมอ
     ['trashGlass', 'trashPaper', 'trashPlastic', 'trashMetal', 'trashOther', 'todayTrash'].forEach(field => {
         document.getElementById(field).value = 0;
     });
@@ -355,6 +395,7 @@ window.openModal = (mode, id = null) => {
         document.getElementById('trash6Months').value = 0;
         document.getElementById('benefitStatus').value = 'ยังไม่รับสิทธิ์';
 
+        // รีเซ็ตตัวแปรสะสมเดิม
         ['oldGlass', 'oldPaper', 'oldPlastic', 'oldMetal', 'oldOther'].forEach(field => {
             document.getElementById(field).value = 0;
         });
@@ -380,6 +421,7 @@ window.openModal = (mode, id = null) => {
             document.getElementById('trash6Months').value = member.trash6Months || 0;
             document.getElementById('benefitStatus').value = member.benefitStatus || 'ยังไม่รับสิทธิ์';
 
+            // ดึงค่าแยกประเภทของเก่ามาเก็บไว้
             document.getElementById('oldGlass').value = member.accumGlass || 0;
             document.getElementById('oldPaper').value = member.accumPaper || 0;
             document.getElementById('oldPlastic').value = member.accumPlastic || 0;
@@ -395,7 +437,7 @@ window.openModal = (mode, id = null) => {
 window.closeModal = () => { memberModal.classList.add('hidden'); };
 
 // ----------------------------------------------------
-// บันทึกโปรไฟล์สมาชิกและเพิ่มประวัติการทำรายการ
+// บันทึกข้อมูลและสร้าง Transaction
 // ----------------------------------------------------
 memberForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -407,7 +449,7 @@ memberForm.addEventListener('submit', async (e) => {
 
     const tAccum = parseFloat(document.getElementById('trashIncome').value) || 0;
     const tToday = parseFloat(document.getElementById('todayTrash').value) || 0;
-    const finalAccumulatedTrash = tAccum + tToday;
+    const finalAccumulatedTrash = tAccum + tToday; // ยอดสะสมตัวใหม่
 
     const tGlass = parseFloat(document.getElementById('trashGlass').value) || 0;
     const tPaper = parseFloat(document.getElementById('trashPaper').value) || 0;
@@ -415,6 +457,7 @@ memberForm.addEventListener('submit', async (e) => {
     const tMetal = parseFloat(document.getElementById('trashMetal').value) || 0;
     const tOther = parseFloat(document.getElementById('trashOther').value) || 0;
 
+    // คำนวณยอดสะสมรายประเภท (ของเดิม + ของวันนี้)
     const finalGlass = parseFloat(document.getElementById('oldGlass').value) + tGlass;
     const finalPaper = parseFloat(document.getElementById('oldPaper').value) + tPaper;
     const finalPlastic = parseFloat(document.getElementById('oldPlastic').value) + tPlastic;
@@ -435,6 +478,8 @@ memberForm.addEventListener('submit', async (e) => {
         trash6Months: parseFloat(document.getElementById('trash6Months').value) || 0,
         benefitStatus: document.getElementById('benefitStatus').value,
         status: document.getElementById('memberStatus').value,
+        
+        // เซฟยอดสะสมแยกประเภทลงฐานข้อมูล
         accumGlass: finalGlass,
         accumPaper: finalPaper,
         accumPlastic: finalPlastic,
@@ -446,7 +491,7 @@ memberForm.addEventListener('submit', async (e) => {
         if (mode === 'add') { await setDoc(doc(db, "members", mId), data); }
         else if (mode === 'edit') { await updateDoc(doc(db, "members", docId), data); }
         
-        // หากวันนี้มีการนำขยะมาขาย ให้บันทึกลงในคอลเลกชัน transactions เพื่อใช้ในหน้ารายงาน
+        // ถ้ามีการขายขยะ ให้บันทึกประวัติไว้ใช้ในหน้ารายงาน
         if (tToday > 0) {
             await addDoc(collection(db, "transactions"), {
                 memberId: mId,
@@ -468,27 +513,39 @@ memberForm.addEventListener('submit', async (e) => {
     } catch (error) { alert('เกิดข้อผิดพลาด: ' + error.message); }
 });
 
-window.deleteMember = async (id) => {
-    if (confirm('ยืนยันการลบสมาชิกรายนี้?')) {
-        try { 
-            await deleteDoc(doc(db, "members", id)); 
-            fetchAdminMembers(); 
-        }
-        catch (error) { alert('ลบไม่สำเร็จ: ' + error.message); }
+// ----------------------------------------------------
+// ระบบส่งออกข้อมูล (Export to Excel)
+// ----------------------------------------------------
+window.exportToExcel = () => {
+    if (allMembers.length === 0) {
+        alert('ไม่มีข้อมูลสมาชิกในระบบสำหรับส่งออกครับ');
+        return;
     }
-};
 
-document.getElementById('adminSearchInput').addEventListener('input', (e) => {
-    const term = e.target.value.trim().toLowerCase();
-    if (term === '') {
-        filteredMembers = [...allMembers];
-    } else {
-        filteredMembers = allMembers.filter(m => 
-            (m.name && m.name.toLowerCase().includes(term)) || 
-            (m.memberId && m.memberId.toLowerCase().includes(term)) ||
-            (m.community && m.community.toLowerCase().includes(term))
-        );
-    }
-    currentPage = 1; 
-    displayAdminTable();
-});
+    alert('กำลังเตรียมไฟล์ Excel กรุณารอสักครู่...');
+
+    const exportData = allMembers.map(m => ({
+        'เลขสมาชิก': m.memberId || m.id,
+        'ชื่อ-สกุล': m.name || '',
+        'เขต': m.zone || '',
+        'ชุมชน': m.community || '',
+        'วันที่สมัคร': m.joinDate || '',
+        'เงินฝาก': parseFloat(m.deposit || 0),
+        'ขายขยะสะสม': parseFloat(m.trashIncome || 0),
+        'ขายขยะใน 6 เดือน': parseFloat(m.trash6Months || 0),
+        'ถอนเงิน': parseFloat(m.withdraw || 0),
+        'หักฌาปนกิจ': parseFloat(m.deduction || 0),
+        'ยอดเงินคงเหลือ': parseFloat(m.balance || 0),
+        'รับสิทธิ์': m.benefitStatus || 'ยังไม่รับสิทธิ์',
+        'สถานะสมาชิก': m.status || 'ไม่ผ่านเกณฑ์'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "ข้อมูลสมาชิก");
+
+    const dateStr = new Date().toLocaleDateString('th-TH').replace(/\//g, '-');
+    const fileName = `ข้อมูลสมาชิก_${dateStr}.xlsx`;
+
+    XLSX.writeFile(workbook, fileName);
+};
