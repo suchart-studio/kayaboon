@@ -549,3 +549,33 @@ window.exportToExcel = () => {
 
     XLSX.writeFile(workbook, fileName);
 };
+// ----------------------------------------------------
+// ระบบลบสมาชิก
+// ----------------------------------------------------
+window.deleteMember = async (id) => {
+    if (confirm('ยืนยันการลบสมาชิกรายนี้?')) {
+        try { 
+            await deleteDoc(doc(db, "members", id)); 
+            fetchAdminMembers(); 
+        }
+        catch (error) { alert('ลบไม่สำเร็จ: ' + error.message); }
+    }
+};
+
+// ----------------------------------------------------
+// ระบบค้นหาสมาชิก (Search)
+// ----------------------------------------------------
+document.getElementById('adminSearchInput').addEventListener('input', (e) => {
+    const term = e.target.value.trim().toLowerCase();
+    if (term === '') {
+        filteredMembers = [...allMembers];
+    } else {
+        filteredMembers = allMembers.filter(m => 
+            (m.name && m.name.toLowerCase().includes(term)) || 
+            (m.memberId && String(m.memberId).toLowerCase().includes(term)) ||
+            (m.community && m.community.toLowerCase().includes(term))
+        );
+    }
+    currentPage = 1; 
+    displayAdminTable();
+});
