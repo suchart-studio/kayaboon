@@ -4,12 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เปลี่ยนขยะเป็นบุญ</title>
-    
-    <!-- เพิ่ม PWA Meta Tags -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#16a34a">
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -55,66 +49,6 @@
         <button onclick="nextUserPage()" class="px-4 py-2 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg font-bold text-sm shadow-sm active:bg-gray-200">➡️</button>
     </div>
 
-    <!-- ส่วน Popup แจ้งเตือนติดตั้งแอป PWA -->
-    <div id="installPrompt" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl">
-            <div class="bg-green-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
-                <span class="text-3xl">📱</span>
-            </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">ติดตั้งแอปพลิเคชัน</h3>
-            <p class="text-sm text-gray-500 mb-6">เพิ่ม "เปลี่ยนขยะเป็นบุญ" ลงในหน้าจอโทรศัพท์ของคุณ เพื่อการเข้าถึงที่สะดวกรวดเร็วในครั้งต่อไป</p>
-            <div class="flex space-x-3">
-                <button id="closeInstallBtn" class="flex-1 py-3 rounded-xl border-2 border-gray-100 text-gray-600 font-bold hover:bg-gray-50 transition active:scale-95">ไว้คราวหลัง</button>
-                <button id="installBtn" class="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition shadow-lg shadow-green-200 active:scale-95">ติดตั้งเลย</button>
-            </div>
-        </div>
-    </div>
-
     <script type="module" src="js/app.js"></script>
-
-    <!-- สคริปต์จัดการ PWA และ Popup ติดตั้ง -->
-    <script>
-        // 1. ลงทะเบียน Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Reg Error:', err));
-            });
-        }
-
-        // 2. จัดการหน้าต่างแจ้งเตือนติดตั้งแอป
-        let deferredPrompt;
-        const installPrompt = document.getElementById('installPrompt');
-        const installBtn = document.getElementById('installBtn');
-        const closeInstallBtn = document.getElementById('closeInstallBtn');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // ป้องกันไม่ให้เบราว์เซอร์โชว์แถบติดตั้งแบบ default
-            e.preventDefault();
-            // เก็บ event ไว้เพื่อเรียกใช้เมื่อผู้ใช้กดปุ่มของเรา
-            deferredPrompt = e;
-            
-            // เช็คว่าผู้ใช้เคยกดปิดไปแล้วหรือไม่
-            if (!localStorage.getItem('pwaPromptDismissed')) {
-                installPrompt.classList.remove('hidden');
-            }
-        });
-
-        installBtn.addEventListener('click', async () => {
-            installPrompt.classList.add('hidden');
-            if (deferredPrompt) {
-                // แสดงหน้าต่างติดตั้งของระบบ
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                console.log(`User response: ${outcome}`);
-                deferredPrompt = null;
-            }
-        });
-
-        closeInstallBtn.addEventListener('click', () => {
-            installPrompt.classList.add('hidden');
-            // จำไว้ในเครื่องว่าผู้ใช้กดปิด จะได้ไม่เด้งกวนใจอีก
-            localStorage.setItem('pwaPromptDismissed', 'true');
-        });
-    </script>
 </body>
 </html>
