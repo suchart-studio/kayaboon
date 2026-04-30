@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เปลี่ยนขยะเป็นบุญ</title>
+    <title>กองทุนฌาปนกิจเปลี่ยนขยะเป็นบุญ</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
@@ -22,30 +22,49 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
+        /* แอนิเมชั่นหมุนตอนโหลด */
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @-webkit-keyframes spinner { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="text-slate-800">
 
     <div class="max-w-md mx-auto px-4 py-8">
-        <div class="text-center mb-8">
-            <div class="bg-blue-600 w-20 h-20 rounded-3xl shadow-lg flex items-center justify-center mx-auto mb-4">
-                <span class="text-4xl">♻️</span>
+        <div class="text-center mb-6">
+            <div class="bg-blue-600 w-16 h-16 rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-3">
+                <span class="text-3xl">♻️</span>
             </div>
-            <h1 class="text-2xl font-bold text-slate-800">เปลี่ยนขยะเป็นบุญ</h1>
-            <p class="text-slate-500 text-sm">ตรวจสอบข้อมูลสมาชิกและเงินคงเหลือ</p>
+            <h1 class="text-xl font-bold text-slate-800">กองทุนขยะเป็นบุญ</h1>
+            <p class="text-slate-500 text-xs">เทศบาลนครขอนแก่น</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="glass-card p-4 rounded-2xl shadow-md text-center border-b-4 border-blue-500">
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-tight mb-1">ยอดเงินกองทุนรวม</p>
+                <h2 id="globalTotalBalance" class="text-lg font-bold text-blue-600 leading-none">฿0.00</h2>
+            </div>
+            <div class="glass-card p-4 rounded-2xl shadow-md text-center border-b-4 border-green-500">
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-tight mb-1">สมาชิกทั้งหมด</p>
+                <h2 id="globalTotalMembers" class="text-lg font-bold text-slate-800 leading-none">0 คน</h2>
+            </div>
         </div>
 
         <div class="glass-card p-6 rounded-3xl shadow-xl mb-6">
-            <label class="block text-sm font-bold text-slate-700 mb-2">ค้นหาด้วยเลขสมาชิก หรือ ชื่อ-สกุล</label>
+            <label class="block text-sm font-bold text-slate-700 mb-2">ตรวจสอบข้อมูลสมาชิก</label>
             <div class="relative">
                 <input type="text" id="searchInput" 
                     class="w-full p-4 pr-12 rounded-2xl border-2 border-slate-100 focus:border-blue-500 focus:outline-none transition-all text-lg shadow-sm"
-                    placeholder="ตัวอย่าง: 001 หรือ สมชาย">
+                    placeholder="เลขสมาชิก หรือ ชื่อ-สกุล">
                 <button id="searchBtn" class="absolute right-2 top-2 bg-blue-600 text-white p-2.5 rounded-xl hover:bg-blue-700 transition">
                     🔍
                 </button>
             </div>
-            <p class="text-[10px] text-slate-400 mt-3 text-center">* ค้นหาได้เฉพาะสมาชิกที่ลงทะเบียนในระบบแล้วเท่านั้น</p>
+            <p class="text-[10px] text-slate-400 mt-3 text-center">* พิมพ์ชื่อหรือเลขสมาชิกแล้วกดค้นหา</p>
         </div>
 
         <div id="resultCard" class="hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -53,7 +72,7 @@
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">รหัสสมาชิก: <span id="resId" class="text-blue-600"></span></p>
+                            <p class="text-xs text-slate-400 font-bold uppercase">รหัส: <span id="resId" class="text-blue-600"></span></p>
                             <h2 id="resName" class="text-2xl font-bold text-slate-800"></h2>
                         </div>
                         <span id="resStatusBadge" class="px-3 py-1 rounded-full text-xs font-bold"></span>
@@ -98,7 +117,7 @@
 
         <footer class="mt-12 text-center">
             <a href="admin.html" class="text-slate-400 text-xs hover:text-blue-500 transition underline">เข้าสู่ระบบผู้ดูแล (Admin)</a>
-            <p class="text-[10px] text-slate-300 mt-4">© 2024 กองทุนฌาปนกิจเปลี่ยนขยะเป็นบุญ เทศบาลนครขอนแก่น</p>
+            <p class="text-[10px] text-slate-300 mt-4">© 2024 กองทุนฌาปนกิจเปลี่ยนขยะเป็นบุญ</p>
         </footer>
     </div>
 
@@ -111,17 +130,36 @@
         const resultCard = document.getElementById('resultCard');
         const notFound = document.getElementById('notFound');
 
+        // --- 1. ฟังก์ชันดึงสถิติรวมของกองทุน ---
+        async function fetchGlobalStats() {
+            try {
+                const querySnapshot = await getDocs(collection(db, "members"));
+                let totalFunds = 0;
+                let memberCount = 0;
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    totalFunds += parseFloat(data.balance || 0);
+                    memberCount++;
+                });
+
+                document.getElementById('globalTotalBalance').innerText = '฿' + totalFunds.toLocaleString(undefined, {minimumFractionDigits: 2});
+                document.getElementById('globalTotalMembers').innerText = memberCount.toLocaleString() + ' คน';
+            } catch (error) {
+                console.error("Error fetching stats:", error);
+            }
+        }
+
+        // --- 2. ฟังก์ชันค้นหาสมาชิก ---
         async function performSearch() {
             const term = searchInput.value.trim();
             if (!term) return;
 
-            // Show Loading State
-            searchBtn.innerHTML = '...';
+            searchBtn.innerHTML = '<div class="loader ease-linear rounded-full border-2 border-t-2 border-gray-200 h-5 w-5"></div>';
             resultCard.classList.add('hidden');
             notFound.classList.add('hidden');
 
             try {
-                // ค้นหาแบบยืดหยุ่น: เลขสมาชิก หรือ ชื่อ-สกุล
                 const q = query(
                     collection(db, "members"),
                     or(
@@ -140,7 +178,7 @@
                 }
             } catch (error) {
                 console.error("Search error:", error);
-                alert("เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล");
+                alert("ไม่สามารถเชื่อมต่อฐานข้อมูลได้");
             } finally {
                 searchBtn.innerHTML = '🔍';
             }
@@ -172,19 +210,20 @@
             resultCard.classList.remove('hidden');
         }
 
+        // โหลดสถิติเมื่อเปิดหน้าเว็บ
+        window.addEventListener('DOMContentLoaded', fetchGlobalStats);
+        
         searchBtn.addEventListener('click', performSearch);
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') performSearch();
         });
 
-        // ----------------------------------------------------
-        // PWA Service Worker Registration
-        // ----------------------------------------------------
+        // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW Registered'))
-                    .catch(err => console.log('SW Reg Error', err));
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    console.log('PWA Ready');
+                });
             });
         }
     </script>
