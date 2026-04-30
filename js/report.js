@@ -29,32 +29,40 @@ async function initDashboard() {
 
 // 1. สรุปข้อมูลสมาชิก
 async function fetchMemberSummary() {
-    const snap = await getDocs(collection(db, "members"));
-    let totalMembers = 0;
-    let totalBalance = 0;
-    let activeCount = 0;
+    try {
+        const snap = await getDocs(collection(db, "members"));
+        let totalMembers = 0;
+        let totalBalance = 0;
+        let activeCount = 0;
 
-    snap.forEach(doc => {
-        const data = doc.data();
-        totalMembers++;
-        totalBalance += parseFloat(data.balance || 0);
-        if (data.status === 'ผ่านเกณฑ์') activeCount++;
-    });
+        snap.forEach(doc => {
+            const data = doc.data();
+            totalMembers++;
+            totalBalance += parseFloat(data.balance || 0);
+            if (data.status === 'ผ่านเกณฑ์') activeCount++;
+        });
 
-    document.getElementById('dashTotalMembers').innerText = totalMembers.toLocaleString();
-    document.getElementById('dashTotalBalance').innerText = '฿' + totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2});
-    document.getElementById('dashActiveMembers').innerText = activeCount.toLocaleString();
+        document.getElementById('dashTotalMembers').innerText = totalMembers.toLocaleString();
+        document.getElementById('dashTotalBalance').innerText = '฿' + totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById('dashActiveMembers').innerText = activeCount.toLocaleString();
+    } catch(err) {
+        console.error("Error loading members summary:", err);
+    }
 }
 
 // 2. โหลดข้อมูลขยะทั้งหมด
 async function loadTrashData() {
-    const q = query(collection(db, "trash_records"), orderBy("date", "desc"));
-    const snap = await getDocs(q);
-    
-    allTrashRecords = [];
-    snap.forEach(doc => {
-        allTrashRecords.push(doc.data());
-    });
+    try {
+        const q = query(collection(db, "trash_records"), orderBy("date", "desc"));
+        const snap = await getDocs(q);
+        
+        allTrashRecords = [];
+        snap.forEach(doc => {
+            allTrashRecords.push(doc.data());
+        });
+    } catch(err) {
+        console.error("Error loading trash records:", err);
+    }
 }
 
 // 3. ติดตั้งค่าตัวกรอง (Dropdowns)
@@ -129,12 +137,14 @@ function updateDashboard() {
         sumMetal += parseFloat(data.metal || 0);
         sumOther += parseFloat(data.other || 0);
 
-        communityTotals[data.community] = (communityTotals[data.community] || 0) + parseFloat(data.total || 0);
+        if(data.community) {
+            communityTotals[data.community] = (communityTotals[data.community] || 0) + parseFloat(data.total || 0);
+        }
 
         tableHtml += `
             <tr class="hover:bg-slate-50 transition border-b border-slate-50">
-                <td class="p-4 font-mono text-slate-500">${data.date}</td>
-                <td class="p-4 font-medium text-slate-700">${data.community}</td>
+                <td class="p-4 font-mono text-slate-500">${data.date || '-'}</td>
+                <td class="p-4 font-medium text-slate-700">${data.community || '-'}</td>
                 <td class="p-4 text-right">฿${(data.glass || 0).toLocaleString()}</td>
                 <td class="p-4 text-right">฿${(data.paper || 0).toLocaleString()}</td>
                 <td class="p-4 text-right">฿${(data.plastic || 0).toLocaleString()}</td>
@@ -184,7 +194,7 @@ function renderRanking(communityTotals) {
         const amount = communityTotals[comm].toLocaleString(undefined, {minimumFractionDigits: 2});
 
         listEl.innerHTML += `
-            <div class="flex justify-between items-center p-3 border rounded-xl ${bgClass}">
+            <div class="flex justify-between items-center p-3 border rounded-xl mb-2 ${bgClass}">
                 <span class="flex items-center gap-2 ${textClass}">
                     <span class="text-lg">${medal}</span> ${comm}
                 </span>
