@@ -83,7 +83,6 @@
                             <th class="p-3 font-semibold text-right text-indigo-300">ขยะสะสม</th>
                             <th class="p-3 font-semibold text-right text-yellow-300">ขยะ 6 เดือน</th>
                             <th class="p-3 font-semibold text-right text-blue-300">คงเหลือ</th>
-                            <th class="p-3 font-semibold text-center text-purple-300">รับสิทธิ์</th>
                             <th class="p-3 font-semibold text-center">สถานะ</th>
                             <th class="p-3 font-semibold text-center">จัดการ</th>
                         </tr>
@@ -107,12 +106,6 @@
             <form id="memberForm">
                 <input type="hidden" id="formMode"> 
                 <input type="hidden" id="docId">
-                
-                <input type="hidden" id="oldGlass" value="0">
-                <input type="hidden" id="oldPaper" value="0">
-                <input type="hidden" id="oldPlastic" value="0">
-                <input type="hidden" id="oldMetal" value="0">
-                <input type="hidden" id="oldOther" value="0">
                 
                 <div class="grid grid-cols-3 gap-4 mb-4">
                     <div>
@@ -146,8 +139,8 @@
                 </div>
 
                 <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-200 mb-4">
-                    <h3 class="text-sm font-bold text-yellow-700 mb-3">เงื่อนไขและการรับสิทธิ์</h3>
-                    <div class="grid grid-cols-3 gap-4">
+                    <h3 class="text-sm font-bold text-yellow-700 mb-3">ข้อมูลเพิ่มเติม</h3>
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-1">วันที่สมัคร</label>
                             <input type="date" id="joinDate" class="w-full p-2 border border-gray-300 rounded-lg bg-white" required>
@@ -155,14 +148,7 @@
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-1">ขายขยะใน 6 เดือน (บาท)</label>
                             <input type="number" id="trash6Months" step="0.01" value="0" class="calc-input w-full p-2 border border-yellow-400 rounded-lg text-yellow-700 font-bold focus:ring-yellow-500 bg-white" required>
-                            <p class="text-[10px] text-gray-500 mt-1">*เก็บเป็นประวัติ (ไม่มีผลกับสถานะ)</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-purple-700 mb-1">สถานะการรับสิทธิ์</label>
-                            <select id="benefitStatus" class="calc-input w-full p-2 border border-purple-300 rounded-lg bg-white text-purple-800 font-bold focus:ring-purple-500">
-                                <option value="ยังไม่รับสิทธิ์">ยังไม่รับสิทธิ์</option>
-                                <option value="รับสิทธิ์แล้ว">รับสิทธิ์แล้ว (เสียชีวิต)</option>
-                            </select>
+                            <p class="text-[10px] text-gray-500 mt-1">*เก็บเป็นประวัติ</p>
                         </div>
                     </div>
                 </div>
@@ -176,22 +162,22 @@
                                 <div class="flex space-x-2">
                                     <input type="text" id="ben1Name" placeholder="1. ชื่อผู้รับสิทธิ์" class="flex-1 p-2 border border-emerald-200 rounded-lg bg-white focus:ring-2 focus:ring-emerald-500 text-sm">
                                     <select id="ben1Status" class="w-1/3 p-2 border border-emerald-200 rounded-lg bg-white text-sm font-bold text-gray-700">
-                                        <option value="ยังไม่รับ">🔴 ยังไม่รับ</option>
-                                        <option value="รับแล้ว">🟢 รับแล้ว</option>
+                                        <option value="ยังไม่รับ">🟢 ยังไม่รับ</option>
+                                        <option value="รับแล้ว">🔴 รับแล้ว</option>
                                     </select>
                                 </div>
                                 <div class="flex space-x-2">
                                     <input type="text" id="ben2Name" placeholder="2. ชื่อผู้รับสิทธิ์" class="flex-1 p-2 border border-emerald-200 rounded-lg bg-white focus:ring-2 focus:ring-emerald-500 text-sm">
                                     <select id="ben2Status" class="w-1/3 p-2 border border-emerald-200 rounded-lg bg-white text-sm font-bold text-gray-700">
-                                        <option value="ยังไม่รับ">🔴 ยังไม่รับ</option>
-                                        <option value="รับแล้ว">🟢 รับแล้ว</option>
+                                        <option value="ยังไม่รับ">🟢 ยังไม่รับ</option>
+                                        <option value="รับแล้ว">🔴 รับแล้ว</option>
                                     </select>
                                 </div>
                                 <div class="flex space-x-2">
                                     <input type="text" id="ben3Name" placeholder="3. ชื่อผู้รับสิทธิ์" class="flex-1 p-2 border border-emerald-200 rounded-lg bg-white focus:ring-2 focus:ring-emerald-500 text-sm">
                                     <select id="ben3Status" class="w-1/3 p-2 border border-emerald-200 rounded-lg bg-white text-sm font-bold text-gray-700">
-                                        <option value="ยังไม่รับ">🔴 ยังไม่รับ</option>
-                                        <option value="รับแล้ว">🟢 รับแล้ว</option>
+                                        <option value="ยังไม่รับ">🟢 ยังไม่รับ</option>
+                                        <option value="รับแล้ว">🔴 รับแล้ว</option>
                                     </select>
                                 </div>
                             </div>
@@ -210,43 +196,13 @@
                 <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 shadow-inner">
                     <h3 class="text-sm font-bold text-blue-600 mb-3">คำนวณยอดเงิน</h3>
                     
-                    <div class="bg-blue-100 p-3 rounded-lg border border-blue-200 mb-4 shadow-sm">
-                        <label class="text-sm font-bold text-blue-800 mb-2 block border-b border-blue-200 pb-1">บันทึกยอดขายขยะวันนี้ (บาท) <span class="text-blue-600">+</span></label>
-                        <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
-                            <div>
-                                <label class="text-xs text-gray-700 block font-bold mb-1">แก้ว</label>
-                                <input type="number" id="trashGlass" step="0.01" value="0" class="calc-input w-full p-2 border border-blue-300 rounded bg-white font-medium focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-700 block font-bold mb-1">กระดาษ</label>
-                                <input type="number" id="trashPaper" step="0.01" value="0" class="calc-input w-full p-2 border border-blue-300 rounded bg-white font-medium focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-700 block font-bold mb-1">พลาสติก</label>
-                                <input type="number" id="trashPlastic" step="0.01" value="0" class="calc-input w-full p-2 border border-blue-300 rounded bg-white font-medium focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-700 block font-bold mb-1">โลหะ</label>
-                                <input type="number" id="trashMetal" step="0.01" value="0" class="calc-input w-full p-2 border border-blue-300 rounded bg-white font-medium focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-700 block font-bold mb-1">อื่นๆ</label>
-                                <input type="number" id="trashOther" step="0.01" value="0" class="calc-input w-full p-2 border border-blue-300 rounded bg-white font-medium focus:ring-2 focus:ring-blue-500">
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-blue-200">
-                            <span class="text-sm font-bold text-blue-700">ยอดรวมขยะวันนี้ (ระบบจะนำไปบวกสะสมให้อัตโนมัติ):</span>
-                            <input type="number" id="todayTrash" step="0.01" value="0" class="w-1/3 p-1 text-right border-none bg-transparent text-blue-800 font-bold text-xl" readonly>
-                        </div>
-                    </div>
-
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
                             <label class="text-xs font-bold text-gray-700 mb-1 block">เงินฝาก <span class="text-green-500">+</span></label>
                             <input type="number" id="deposit" step="0.01" value="0" class="calc-input w-full p-2 border border-green-300 rounded-lg text-green-700 font-bold" required>
                         </div>
                         <div>
-                            <label class="text-xs font-bold text-gray-700 mb-1 block">ขายขยะสะสมเดิม <span class="text-indigo-500">+</span></label>
+                            <label class="text-xs font-bold text-gray-700 mb-1 block">ขายขยะสะสมรวม <span class="text-indigo-500">+</span></label>
                             <input type="number" id="trashIncome" step="0.01" value="0" class="calc-input w-full p-2 border border-indigo-300 rounded-lg text-indigo-700 font-bold" required>
                         </div>
                         <div>
@@ -265,7 +221,7 @@
                     </div>
 
                     <div class="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between bg-white p-3 rounded-lg border">
-                        <label class="block text-sm font-bold text-gray-800">สถานะสมาชิก (เงิน >= 300 และ ยังไม่รับสิทธิ์) :</label>
+                        <label class="block text-sm font-bold text-gray-800">สถานะสมาชิก (เงิน >= 300) :</label>
                         <input type="text" id="memberStatus" class="w-1/3 p-2 text-center border-2 border-gray-300 rounded-lg bg-gray-100 font-bold" readonly>
                     </div>
                 </div>
@@ -278,6 +234,6 @@
         </div>
     </div>
 
-<script type="module" src="js/admin.js"></script>
+    <script type="module" src="js/admin.js"></script>
 </body>
 </html>
