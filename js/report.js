@@ -1,12 +1,11 @@
 import { db } from "./firebase-config.js";
 import { collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-// ตัวแปรเก็บข้อมูล
 let allTrashRecords = [];
 let typeChartInstance = null;
 let barChartInstance = null;
 
-// ข้อมูลชุมชนทั้งหมดเพื่อใส่ใน Dropdown ตัวกรอง
+// ข้อมูลชุมชนสำหรับ Filter
 const communityData = {
     "0": ["พนักงานเทศบาล"],
     "1": ["โนนชัย 1", "โนนชัย 2", "โนนชัย 3", "ดอนหญ้านาง 1", "ดอนหญ้านาง 2", "ดอนหญ้านาง 3", "หลังศูนย์ราชการ 1", "หลังศูนย์ราชการ 2", "เทพารักษ์ 1", "เทพารักษ์ 2", "เทพารักษ์ 3", "เทพารักษ์ 4", "เทพารักษ์ 5", "พัฒนาเทพารักษ์", "เจ้าพ่อเกษม", "เจ้าพ่อทองสุข", "บขส"],
@@ -15,250 +14,157 @@ const communityData = {
     "4": ["สามเหลี่ยม 1", "สามเหลี่ยม 2", "สามเหลี่ยม 3", "สามเหลี่ยม 4", "สามเหลี่ยม 5", "ศรีฐาน 1", "ศรีฐาน 2", "ศรีฐาน 3", "ศรีฐาน 4", "หนองแวงตราชู 1", "หนองแวงตราชู 2", "หนองแวงตราชู 3", "หนองแวงตราชู 4", "คุ้มวัดป่าอดุลยาราม", "ไทยสมุทร", "เทคโนภาค", "ตะวันใหม่", "มิตรภาพ", "ตลาดต้นตาล"]
 };
 
-// ตัวกรอง
 const filterYear = document.getElementById('filterYear');
 const filterMonth = document.getElementById('filterMonth');
 const filterCommunity = document.getElementById('filterCommunity');
 
 async function initDashboard() {
-    await fetchMemberSummary(); // โหลดสรุปข้อมูลสมาชิก (ไม่อิงตัวกรองวันที่)
-    await loadTrashData();      // โหลดข้อมูลขยะทั้งหมดมาเก็บไว้ใน Array
-    setupFilters();             // สร้างตัวเลือกกรองข้อมูล
-    updateDashboard();          // เรนเดอร์กราฟ/ตารางรอบแรก
+    await fetchMemberSummary();
+    await loadTrashData();
+    setupFilters();
+    updateDashboard();
 }
 
-// 1. สรุปข้อมูลสมาชิก
+// 1. ดึงสรุปสมาชิก
 async function fetchMemberSummary() {
     try {
         const snap = await getDocs(collection(db, "members"));
-        let totalMembers = 0;
-        let totalBalance = 0;
-        let activeCount = 0;
-
+        let totalMembers = 0, totalBalance = 0, activeCount = 0;
         snap.forEach(doc => {
-            const data = doc.data();
+            const d = doc.data();
             totalMembers++;
-            totalBalance += parseFloat(data.balance || 0);
-            if (data.status === 'ผ่านเกณฑ์') activeCount++;
+            totalBalance += parseFloat(d.balance || 0);
+            if (d.status === 'ผ่านเกณฑ์') activeCount++;
         });
-
         document.getElementById('dashTotalMembers').innerText = totalMembers.toLocaleString();
         document.getElementById('dashTotalBalance').innerText = '฿' + totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2});
         document.getElementById('dashActiveMembers').innerText = activeCount.toLocaleString();
-    } catch(err) {
-        console.error("Error loading members summary:", err);
-    }
+    } catch (e) { console.error(e); }
 }
 
-// 2. โหลดข้อมูลขยะทั้งหมด
+// 2. ดึงข้อมูลขยะทั้งหมด
 async function loadTrashData() {
     try {
         const q = query(collection(db, "trash_records"), orderBy("date", "desc"));
         const snap = await getDocs(q);
-        
         allTrashRecords = [];
-        snap.forEach(doc => {
-            allTrashRecords.push(doc.data());
-        });
-    } catch(err) {
-        console.error("Error loading trash records:", err);
-    }
+        snap.forEach(doc => allTrashRecords.push(doc.data()));
+    } catch (e) { console.error(e); }
 }
 
-// 3. ติดตั้งค่าตัวกรอง (Dropdowns)
+// 3. ตั้งค่า Dropdowns
 function setupFilters() {
     let years = new Set();
     let allComms = [];
+    for(let z in communityData) allComms = allComms.concat(communityData[z]);
+    allComms.sort().forEach(c => filterCommunity.innerHTML += `<option value="${c}">${c}</option>`);
 
-    // ดึงชุมชน
-    for(let zone in communityData) { allComms = allComms.concat(communityData[zone]); }
-    allComms.sort().forEach(c => {
-        filterCommunity.innerHTML += `<option value="${c}">${c}</option>`;
-    });
+    allTrashRecords.forEach(r => { if(r.date) years.add(r.date.substring(0, 4)); });
+    Array.from(years).sort().reverse().forEach(y => filterYear.innerHTML += `<option value="${y}">${y}</option>`);
 
-    // ดึงปีที่มีในระบบ
-    allTrashRecords.forEach(r => {
-        if(r.date) years.add(r.date.substring(0, 4)); // "YYYY"
-    });
-    Array.from(years).sort().reverse().forEach(y => {
-        filterYear.innerHTML += `<option value="${y}">${y}</option>`;
-    });
+    const months = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+    months.forEach((m, i) => filterMonth.innerHTML += `<option value="${(i+1).toString().padStart(2,'0')}">${m}</option>`);
 
-    // ใส่เดือน 12 เดือน
-    const monthNames = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
-    monthNames.forEach((m, i) => {
-        let val = (i+1).toString().padStart(2, '0');
-        filterMonth.innerHTML += `<option value="${val}">${m}</option>`;
-    });
-
-    // Event Listeners
-    filterYear.addEventListener('change', updateDashboard);
-    filterMonth.addEventListener('change', updateDashboard);
-    filterCommunity.addEventListener('change', updateDashboard);
-
-    document.getElementById('resetFilterBtn').addEventListener('click', () => {
-        filterYear.value = 'all';
-        filterMonth.value = 'all';
-        filterCommunity.value = 'all';
+    [filterYear, filterMonth, filterCommunity].forEach(el => el.addEventListener('change', updateDashboard));
+    document.getElementById('resetFilterBtn').onclick = () => {
+        filterYear.value = filterMonth.value = filterCommunity.value = 'all';
         updateDashboard();
-    });
+    };
 }
 
-// 4. อัปเดตข้อมูลและกราฟตามตัวกรอง
+// 4. คำนวณและอัปเดต UI
 function updateDashboard() {
-    const y = filterYear.value;
-    const m = filterMonth.value;
-    const c = filterCommunity.value;
+    const y = filterYear.value, m = filterMonth.value, c = filterCommunity.value;
 
-    // กรองข้อมูล
-    let filteredData = allTrashRecords.filter(r => {
+    const filtered = allTrashRecords.filter(r => {
         if (!r.date) return false;
-        let rYear = r.date.substring(0, 4);
-        let rMonth = r.date.substring(5, 7);
-        
-        let matchY = (y === 'all' || rYear === y);
-        let matchM = (m === 'all' || rMonth === m);
-        let matchC = (c === 'all' || r.community === c);
-
+        const matchY = (y === 'all' || r.date.startsWith(y));
+        const matchM = (m === 'all' || r.date.substring(5, 7) === m);
+        const matchC = (c === 'all' || r.community === c);
         return matchY && matchM && matchC;
     });
 
-    // คำนวณยอด
-    let totalTrashValue = 0;
-    let sumGlass = 0, sumPaper = 0, sumPlastic = 0, sumMetal = 0, sumOther = 0;
-    let communityTotals = {};
-    let tableHtml = '';
+    let totalKg = 0, sumGlass = 0, sumPaper = 0, sumPlastic = 0, sumMetal = 0, sumOther = 0;
+    let commMap = {}, tableHtml = '';
 
-    filteredData.forEach(data => {
-        totalTrashValue += parseFloat(data.total || 0);
-        sumGlass += parseFloat(data.glass || 0);
-        sumPaper += parseFloat(data.paper || 0);
-        sumPlastic += parseFloat(data.plastic || 0);
-        sumMetal += parseFloat(data.metal || 0);
-        sumOther += parseFloat(data.other || 0);
+    filtered.forEach(d => {
+        const rowTotal = parseFloat(d.total || 0);
+        totalKg += rowTotal;
+        sumGlass += parseFloat(d.glass || 0);
+        sumPaper += parseFloat(d.paper || 0);
+        sumPlastic += parseFloat(d.plastic || 0);
+        sumMetal += parseFloat(d.metal || 0);
+        sumOther += parseFloat(d.other || 0);
 
-        if(data.community) {
-            communityTotals[data.community] = (communityTotals[data.community] || 0) + parseFloat(data.total || 0);
-        }
+        if(d.community) commMap[d.community] = (commMap[d.community] || 0) + rowTotal;
 
         tableHtml += `
             <tr class="hover:bg-slate-50 transition border-b border-slate-50">
-                <td class="p-4 font-mono text-slate-500">${data.date || '-'}</td>
-                <td class="p-4 font-medium text-slate-700">${data.community || '-'}</td>
-                <td class="p-4 text-right">฿${(data.glass || 0).toLocaleString()}</td>
-                <td class="p-4 text-right">฿${(data.paper || 0).toLocaleString()}</td>
-                <td class="p-4 text-right">฿${(data.plastic || 0).toLocaleString()}</td>
-                <td class="p-4 text-right font-bold text-blue-600">฿${(data.total || 0).toLocaleString()}</td>
-            </tr>
-        `;
+                <td class="p-4 font-mono text-slate-500">${d.date}</td>
+                <td class="p-4 font-medium text-slate-700">${d.community}</td>
+                <td class="p-4 text-right">${(d.glass || 0).toFixed(2)}</td>
+                <td class="p-4 text-right">${(d.paper || 0).toFixed(2)}</td>
+                <td class="p-4 text-right">${(d.plastic || 0).toFixed(2)}</td>
+                <td class="p-4 text-right font-bold text-blue-600">${rowTotal.toFixed(2)}</td>
+            </tr>`;
     });
 
-    // กรณีไม่มีข้อมูล
-    if (filteredData.length === 0) {
-        tableHtml = `<tr><td colspan="6" class="p-6 text-center text-red-400 font-bold">ไม่มีประวัติการบันทึกขยะในเงื่อนไขนี้</td></tr>`;
-    }
+    document.getElementById('dashTotalTrash').innerText = totalKg.toFixed(2) + ' กก.';
+    document.getElementById('dashTrashTable').innerHTML = tableHtml || '<tr><td colspan="6" class="p-8 text-center text-slate-400">ไม่พบข้อมูลตามเงื่อนไข</td></tr>';
 
-    // แสดงผล
-    document.getElementById('dashTotalTrash').innerText = '฿' + totalTrashValue.toLocaleString(undefined, {minimumFractionDigits: 2});
-    document.getElementById('dashTrashTable').innerHTML = tableHtml;
-
-    // อัปเดตกราฟและจัดอันดับ
-    renderTypeChart([sumGlass, sumPaper, sumPlastic, sumMetal, sumOther]);
-    renderRanking(communityTotals);
-    renderBarChart(communityTotals);
+    renderCharts(sumGlass, sumPaper, sumPlastic, sumMetal, sumOther, commMap);
+    renderRanking(commMap);
 }
 
-// 5. ระบบจัดอันดับ (Ranking UI)
-function renderRanking(communityTotals) {
-    const listEl = document.getElementById('rankingList');
-    listEl.innerHTML = '';
+// 5. ระบบ Ranking
+function renderRanking(commMap) {
+    const list = document.getElementById('rankingList');
+    list.innerHTML = '';
+    const sorted = Object.keys(commMap).sort((a,b) => commMap[b] - commMap[a]);
 
-    // เรียงลำดับจากมากไปน้อย
-    const sortedComms = Object.keys(communityTotals).sort((a, b) => communityTotals[b] - communityTotals[a]);
+    if(sorted.length === 0) { list.innerHTML = '<p class="text-center py-4 text-slate-400">ไม่มีข้อมูล</p>'; return; }
 
-    if(sortedComms.length === 0) {
-        listEl.innerHTML = '<p class="text-slate-400 text-center py-4">ไม่มีข้อมูลจัดอันดับ</p>';
-        return;
-    }
-
-    sortedComms.forEach((comm, index) => {
-        let medal = '';
-        let bgClass = 'bg-white border-slate-100';
-        let textClass = 'text-slate-700';
-
-        if (index === 0) { medal = '🥇'; bgClass = 'bg-yellow-50 border-yellow-200'; textClass = 'text-yellow-700 font-bold'; }
-        else if (index === 1) { medal = '🥈'; bgClass = 'bg-slate-100 border-slate-200'; textClass = 'text-slate-600 font-bold'; }
-        else if (index === 2) { medal = '🥉'; bgClass = 'bg-orange-50 border-orange-200'; textClass = 'text-orange-700 font-bold'; }
-        else { medal = `<span class="inline-block w-5 text-center text-slate-400">${index+1}.</span>`; }
-
-        const amount = communityTotals[comm].toLocaleString(undefined, {minimumFractionDigits: 2});
-
-        listEl.innerHTML += `
-            <div class="flex justify-between items-center p-3 border rounded-xl mb-2 ${bgClass}">
-                <span class="flex items-center gap-2 ${textClass}">
-                    <span class="text-lg">${medal}</span> ${comm}
-                </span>
-                <span class="font-bold ${textClass}">฿${amount}</span>
-            </div>
-        `;
+    sorted.forEach((name, i) => {
+        let badge = (i===0) ? '🥇' : (i===1) ? '🥈' : (i===2) ? '🥉' : `${i+1}.`;
+        let bg = (i<3) ? 'bg-blue-50 border-blue-100' : 'bg-white border-slate-100';
+        list.innerHTML += `
+            <div class="flex justify-between items-center p-3 border rounded-xl mb-2 ${bg}">
+                <span class="font-bold text-slate-700">${badge} ${name}</span>
+                <span class="font-bold text-blue-600">${commMap[name].toFixed(2)} กก.</span>
+            </div>`;
     });
 }
 
-// 6. กราฟวงกลม
-function renderTypeChart(data) {
-    const ctx = document.getElementById('trashTypeChart').getContext('2d');
+// 6. กราฟ
+function renderCharts(glass, paper, plastic, metal, other, commMap) {
+    // Doughnut Chart
+    const ctx1 = document.getElementById('trashTypeChart').getContext('2d');
     if (typeChartInstance) typeChartInstance.destroy();
-
-    const isEmpty = data.every(val => val === 0);
-
-    typeChartInstance = new Chart(ctx, {
+    typeChartInstance = new Chart(ctx1, {
         type: 'doughnut',
         data: {
             labels: ['แก้ว', 'กระดาษ', 'พลาสติก', 'โลหะ', 'อื่นๆ'],
             datasets: [{
-                data: isEmpty ? [1] : data,
-                backgroundColor: isEmpty ? ['#f1f5f9'] : ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#a855f7'],
-                borderWidth: 2,
-                borderColor: '#ffffff'
+                data: [glass, paper, plastic, metal, other],
+                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#a855f7']
             }]
         },
-        options: {
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { boxWidth: 12, font: { family: 'Chakra Petch' } } },
-                tooltip: { enabled: !isEmpty }
-            }
-        }
+        options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
-}
 
-// 7. กราฟแท่ง
-function renderBarChart(communityData) {
-    const ctx = document.getElementById('communityBarChart').getContext('2d');
+    // Bar Chart
+    const ctx2 = document.getElementById('communityBarChart').getContext('2d');
     if (barChartInstance) barChartInstance.destroy();
+    const topLabels = Object.keys(commMap).sort((a,b) => commMap[b] - commMap[a]).slice(0, 10);
+    const topValues = topLabels.map(l => commMap[l]);
 
-    const sortedLabels = Object.keys(communityData).sort((a, b) => communityData[b] - communityData[a]).slice(0, 10);
-    const sortedValues = sortedLabels.map(label => communityData[label]);
-
-    barChartInstance = new Chart(ctx, {
+    barChartInstance = new Chart(ctx2, {
         type: 'bar',
         data: {
-            labels: sortedLabels,
-            datasets: [{
-                label: 'ยอดขยะ (บาท)',
-                data: sortedValues,
-                backgroundColor: '#3b82f6',
-                borderRadius: 6
-            }]
+            labels: topLabels,
+            datasets: [{ label: 'น้ำหนัก (กก.)', data: topValues, backgroundColor: '#3b82f6', borderRadius: 5 }]
         },
-        options: {
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true, grid: { display: false } },
-                x: { grid: { display: false } }
-            },
-            plugins: { legend: { display: false } }
-        }
+        options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
     });
 }
 
