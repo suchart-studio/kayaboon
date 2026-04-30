@@ -79,7 +79,7 @@ function displayMembers() {
                     </span>
                 </div>
 
-                <div class="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl">
+                <div class="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl mb-3">
                     <div class="text-center border-r border-slate-200">
                         <p class="text-[9px] text-slate-400 font-bold uppercase">เงินฝาก</p>
                         <p class="text-xs font-bold text-slate-700">฿${(m.deposit || 0).toLocaleString()}</p>
@@ -94,7 +94,12 @@ function displayMembers() {
                     </div>
                 </div>
 
-                <div class="mt-3 p-3 bg-blue-50/50 rounded-xl flex justify-between items-center">
+                <div class="flex items-center justify-between bg-amber-50 border border-amber-100 p-2.5 rounded-lg mb-3">
+                    <p class="text-xs font-bold text-amber-700">♻️ ประวัติขายขยะ (6 เดือน)</p>
+                    <p class="text-sm font-bold text-amber-700">฿${(parseFloat(m.trash6Months) || 0).toLocaleString()}</p>
+                </div>
+
+                <div class="p-3 bg-blue-50/50 rounded-xl flex justify-between items-center">
                     <p class="text-xs font-bold text-gray-600">เงินคงเหลือสุทธิ</p>
                     <p class="text-xl font-bold text-blue-600">฿${(m.balance || 0).toLocaleString()}</p>
                 </div>
