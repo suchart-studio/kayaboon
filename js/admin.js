@@ -1,5 +1,5 @@
 import { db } from "./firebase-config.js";
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch, addDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 const tableBody = document.getElementById('adminMemberTable');
 const memberModal = document.getElementById('memberModal');
@@ -93,37 +93,26 @@ function updateAdminDashboardSummary(members) {
 }
 
 // ----------------------------------------------------
+// ระบบคำนวณเงินและสถานะ
+// ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
 const trashIncomeInput = document.getElementById('trashIncome'); 
-const todayTrashInput = document.getElementById('todayTrash');   
 const withdrawInput = document.getElementById('withdraw');
 const deductionInput = document.getElementById('deduction');
 const balanceInput = document.getElementById('memberBalance');
-
-const benefitStatusInput = document.getElementById('benefitStatus');
 const statusInput = document.getElementById('memberStatus');
 
 function calculateBalance() {
-    const tGlass = parseFloat(document.getElementById('trashGlass').value) || 0;
-    const tPaper = parseFloat(document.getElementById('trashPaper').value) || 0;
-    const tPlastic = parseFloat(document.getElementById('trashPlastic').value) || 0;
-    const tMetal = parseFloat(document.getElementById('trashMetal').value) || 0;
-    const tOther = parseFloat(document.getElementById('trashOther').value) || 0;
-
-    const tToday = tGlass + tPaper + tPlastic + tMetal + tOther;
-    todayTrashInput.value = tToday.toFixed(2);
-
     const d = parseFloat(depositInput.value) || 0;
     const tAccum = parseFloat(trashIncomeInput.value) || 0;
     const w = parseFloat(withdrawInput.value) || 0;
     const ded = parseFloat(deductionInput.value) || 0;
     
-    const currentBalance = (d + tAccum + tToday) - w - ded;
+    const currentBalance = (d + tAccum) - w - ded;
     balanceInput.value = currentBalance.toFixed(2); 
 
-    const bStatus = benefitStatusInput.value;
-
-    if (currentBalance >= 300 && bStatus === 'ยังไม่รับสิทธิ์') {
+    // เงื่อนไขสถานะใหม่: คิดจากเงิน >= 300 อย่างเดียว
+    if (currentBalance >= 300) {
         statusInput.value = 'ผ่านเกณฑ์';
         statusInput.className = "w-full p-2 text-center border-2 border-green-500 rounded-lg bg-green-100 text-green-700 font-bold";
     } else {
@@ -138,167 +127,7 @@ document.querySelectorAll('.calc-input').forEach(input => {
 });
 
 // ----------------------------------------------------
-// จัดการ Modal
-// ----------------------------------------------------
-window.openModal = (mode, id = null) => {
-    document.getElementById('formMode').value = mode;
-
-    ['trashGlass', 'trashPaper', 'trashPlastic', 'trashMetal', 'trashOther', 'todayTrash'].forEach(field => {
-        document.getElementById(field).value = 0;
-    });
-
-    if (mode === 'add') {
-        document.getElementById('modalTitle').innerText = 'เพิ่มสมาชิกใหม่';
-        memberForm.reset();
-        document.getElementById('memberId').readOnly = false;
-        document.getElementById('docId').value = '';
-        populateCommunities(""); 
-        
-        document.getElementById('trash6Months').value = 0;
-        document.getElementById('benefitStatus').value = 'ยังไม่รับสิทธิ์';
-
-        ['oldGlass', 'oldPaper', 'oldPlastic', 'oldMetal', 'oldOther'].forEach(field => {
-            document.getElementById(field).value = 0;
-        });
-        
-        // เคลียร์ค่าฟิลด์รับสิทธิ์ใหม่
-        ['ben1Name', 'ben2Name', 'ben3Name', 'rec1Name', 'rec2Name', 'rec3Name'].forEach(field => document.getElementById(field).value = '');
-        ['ben1Status', 'ben2Status', 'ben3Status'].forEach(field => document.getElementById(field).value = 'ยังไม่รับ');
-
-        calculateBalance(); 
-    } else if (mode === 'edit') {
-        document.getElementById('modalTitle').innerText = 'แก้ไขข้อมูลสมาชิก';
-        const member = allMembers.find(m => m.id === id);
-        if (member) {
-            document.getElementById('docId').value = id;
-            document.getElementById('memberId').value = member.memberId || id;
-            document.getElementById('memberId').readOnly = true;
-            document.getElementById('memberName').value = member.name;
-            document.getElementById('memberZone').value = member.zone || '';
-            populateCommunities(member.zone || '', member.community || '');
-            document.getElementById('joinDate').value = member.joinDate || '';
-            
-            document.getElementById('deposit').value = member.deposit || 0;
-            document.getElementById('trashIncome').value = member.trashIncome || 0;
-            document.getElementById('withdraw').value = member.withdraw || 0;
-            document.getElementById('deduction').value = member.deduction || 0;
-            document.getElementById('trash6Months').value = member.trash6Months || 0;
-            document.getElementById('benefitStatus').value = member.benefitStatus || 'ยังไม่รับสิทธิ์';
-
-            // โหลดค่าผู้รับสิทธิ์
-            document.getElementById('ben1Name').value = member.ben1Name || '';
-            document.getElementById('ben1Status').value = member.ben1Status || 'ยังไม่รับ';
-            document.getElementById('ben2Name').value = member.ben2Name || '';
-            document.getElementById('ben2Status').value = member.ben2Status || 'ยังไม่รับ';
-            document.getElementById('ben3Name').value = member.ben3Name || '';
-            document.getElementById('ben3Status').value = member.ben3Status || 'ยังไม่รับ';
-            
-            // โหลดค่าผู้รับเงิน
-            document.getElementById('rec1Name').value = member.rec1Name || '';
-            document.getElementById('rec2Name').value = member.rec2Name || '';
-            document.getElementById('rec3Name').value = member.rec3Name || '';
-
-            document.getElementById('oldGlass').value = member.accumGlass || 0;
-            document.getElementById('oldPaper').value = member.accumPaper || 0;
-            document.getElementById('oldPlastic').value = member.accumPlastic || 0;
-            document.getElementById('oldMetal').value = member.accumMetal || 0;
-            document.getElementById('oldOther').value = member.accumOther || 0;
-            
-            calculateBalance(); 
-        }
-    }
-    memberModal.classList.remove('hidden');
-};
-
-window.closeModal = () => { memberModal.classList.add('hidden'); };
-
-// ----------------------------------------------------
-// Submit Form
-// ----------------------------------------------------
-memberForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const mode = document.getElementById('formMode').value;
-    const docId = document.getElementById('docId').value;
-    const mId = document.getElementById('memberId').value;
-    
-    calculateBalance();
-
-    const tAccum = parseFloat(document.getElementById('trashIncome').value) || 0;
-    const tToday = parseFloat(document.getElementById('todayTrash').value) || 0;
-    const finalAccumulatedTrash = tAccum + tToday;
-
-    const tGlass = parseFloat(document.getElementById('trashGlass').value) || 0;
-    const tPaper = parseFloat(document.getElementById('trashPaper').value) || 0;
-    const tPlastic = parseFloat(document.getElementById('trashPlastic').value) || 0;
-    const tMetal = parseFloat(document.getElementById('trashMetal').value) || 0;
-    const tOther = parseFloat(document.getElementById('trashOther').value) || 0;
-
-    const finalGlass = parseFloat(document.getElementById('oldGlass').value) + tGlass;
-    const finalPaper = parseFloat(document.getElementById('oldPaper').value) + tPaper;
-    const finalPlastic = parseFloat(document.getElementById('oldPlastic').value) + tPlastic;
-    const finalMetal = parseFloat(document.getElementById('oldMetal').value) + tMetal;
-    const finalOther = parseFloat(document.getElementById('oldOther').value) + tOther;
-
-    const data = {
-        memberId: mId,
-        name: document.getElementById('memberName').value,
-        zone: document.getElementById('memberZone').value,
-        community: document.getElementById('memberCommunity').value,
-        joinDate: document.getElementById('joinDate').value,
-        deposit: parseFloat(document.getElementById('deposit').value) || 0,
-        trashIncome: finalAccumulatedTrash, 
-        withdraw: parseFloat(document.getElementById('withdraw').value) || 0,
-        deduction: parseFloat(document.getElementById('deduction').value) || 0,
-        balance: parseFloat(document.getElementById('memberBalance').value) || 0, 
-        trash6Months: parseFloat(document.getElementById('trash6Months').value) || 0,
-        benefitStatus: document.getElementById('benefitStatus').value,
-        status: document.getElementById('memberStatus').value,
-        
-        // บันทึกฟิลด์ใหม่ลง Firebase
-        ben1Name: document.getElementById('ben1Name').value.trim(),
-        ben1Status: document.getElementById('ben1Status').value,
-        ben2Name: document.getElementById('ben2Name').value.trim(),
-        ben2Status: document.getElementById('ben2Status').value,
-        ben3Name: document.getElementById('ben3Name').value.trim(),
-        ben3Status: document.getElementById('ben3Status').value,
-        rec1Name: document.getElementById('rec1Name').value.trim(),
-        rec2Name: document.getElementById('rec2Name').value.trim(),
-        rec3Name: document.getElementById('rec3Name').value.trim(),
-
-        accumGlass: finalGlass,
-        accumPaper: finalPaper,
-        accumPlastic: finalPlastic,
-        accumMetal: finalMetal,
-        accumOther: finalOther
-    };
-
-    try {
-        if (mode === 'add') { await setDoc(doc(db, "members", mId), data); }
-        else if (mode === 'edit') { await updateDoc(doc(db, "members", docId), data); }
-        
-        if (tToday > 0) {
-            await addDoc(collection(db, "transactions"), {
-                memberId: mId,
-                name: document.getElementById('memberName').value,
-                community: document.getElementById('memberCommunity').value,
-                timestamp: new Date().toISOString(),
-                trashGlass: tGlass,
-                trashPaper: tPaper,
-                trashPlastic: tPlastic,
-                trashMetal: tMetal,
-                trashOther: tOther,
-                totalIncome: tToday
-            });
-        }
-
-        closeModal();
-        alert('บันทึกข้อมูลเรียบร้อยแล้ว!');
-        fetchAdminMembers(); 
-    } catch (error) { alert('เกิดข้อผิดพลาด: ' + error.message); }
-});
-
-// ----------------------------------------------------
-// ระบบ Excel Upload (ฟังก์ชันเดิมของคุณ)
+// ระบบนำเข้าข้อมูล Excel (Upload Excel)
 // ----------------------------------------------------
 document.getElementById('excelUpload').addEventListener('change', function(e) {
     const file = e.target.files[0];
@@ -319,7 +148,7 @@ document.getElementById('excelUpload').addEventListener('change', function(e) {
 });
 
 async function importExcelToFirebase(data) {
-    tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-indigo-600 font-bold animate-pulse text-lg">กำลังอัพโหลดข้อมูล...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-indigo-600 font-bold animate-pulse text-lg">กำลังอัพโหลดข้อมูล...</td></tr>';
     let count = 0;
     let batches = [];
     let batch = writeBatch(db);
@@ -336,8 +165,9 @@ async function importExcelToFirebase(data) {
         const forceCalculatedBalance = (d + t) - w - ded;
 
         const t6m = parseFloat(row['ขายขยะใน 6 เดือน'] || row['ขยะ 6 เดือน'] || 0);
-        const bStatus = String(row['รับสิทธิ์'] || row['สถานะรับสิทธิ์'] || 'ยังไม่รับสิทธิ์').trim();
-        const autoStatus = (forceCalculatedBalance >= 300 && bStatus === 'ยังไม่รับสิทธิ์') ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
+
+        // คำนวณสถานะใหม่
+        const autoStatus = (forceCalculatedBalance >= 300) ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
 
         const mId = String(row['เลขสมาชิก'] || row['รหัสสมาชิก'] || (Date.now() + count));
         const memberData = {
@@ -352,9 +182,7 @@ async function importExcelToFirebase(data) {
             deduction: ded,
             balance: forceCalculatedBalance, 
             trash6Months: t6m,
-            benefitStatus: bStatus,
-            status: autoStatus,
-            accumGlass: 0, accumPaper: 0, accumPlastic: 0, accumMetal: 0, accumOther: 0
+            status: autoStatus
         };
 
         const docRef = doc(db, "members", mId);
@@ -380,7 +208,7 @@ window.deleteAllMembers = async () => {
         if (pass !== 'ยืนยันการลบ') return alert('ยกเลิกการลบข้อมูล');
 
         try {
-            tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-red-600 font-bold animate-pulse">กำลังลบข้อมูลทั้งหมด...</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-red-600 font-bold animate-pulse">กำลังลบข้อมูลทั้งหมด...</td></tr>';
             const querySnapshot = await getDocs(collection(db, "members"));
             
             let batches = [];
@@ -408,16 +236,16 @@ window.deleteAllMembers = async () => {
 };
 
 // ----------------------------------------------------
-// การแสดงผลตาราง
+// โหลดข้อมูลและแสดงผลในตาราง
 // ----------------------------------------------------
 async function fetchAdminMembers() {
-    tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-gray-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
     try {
         const querySnapshot = await getDocs(collection(db, "members"));
         allMembers = [];
         
         if (querySnapshot.empty) {
-            tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-400">ยังไม่มีข้อมูลสมาชิก</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-gray-400">ยังไม่มีข้อมูลสมาชิก</td></tr>';
             document.getElementById('adminPaginationControls').classList.add('hidden');
             updateAdminDashboardSummary([]); 
             return;
@@ -442,7 +270,7 @@ function displayAdminTable() {
     const totalItems = filteredMembers.length;
     
     if (totalItems === 0) {
-        tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-400">ไม่พบข้อมูลที่ค้นหา</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-gray-400">ไม่พบข้อมูลที่ค้นหา</td></tr>';
         document.getElementById('adminPaginationControls').classList.add('hidden');
         return;
     }
@@ -457,7 +285,6 @@ function displayAdminTable() {
     let htmlString = '';
     displayData.forEach(member => {
         const statusClass = member.status === 'ผ่านเกณฑ์' ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100';
-        const benefitClass = member.benefitStatus === 'รับสิทธิ์แล้ว' ? 'text-purple-700 bg-purple-100 font-bold' : 'text-gray-500';
         const commText = member.community ? `${member.community}` : '-';
 
         htmlString += `
@@ -469,9 +296,6 @@ function displayAdminTable() {
                 <td class="p-3 text-right text-indigo-600 font-bold">${parseFloat(member.trashIncome || 0).toLocaleString()}</td>
                 <td class="p-3 text-right text-yellow-600">${parseFloat(member.trash6Months || 0).toLocaleString()}</td>
                 <td class="p-3 text-right font-bold text-blue-700 bg-blue-50/50">฿${parseFloat(member.balance || 0).toLocaleString()}</td>
-                <td class="p-3 text-center text-xs">
-                    <span class="px-2 py-1 rounded-md ${benefitClass}">${member.benefitStatus || 'ยังไม่รับสิทธิ์'}</span>
-                </td>
                 <td class="p-3 text-center">
                     <span class="px-3 py-1 rounded-full text-xs font-bold ${statusClass}">${member.status}</span>
                 </td>
@@ -488,9 +312,120 @@ function displayAdminTable() {
     document.getElementById('adminPageInfo').innerText = `หน้า ${currentPage} จาก ${totalPages}`;
 }
 
-window.prevAdminPage = () => { if (currentPage > 1) { currentPage--; displayAdminTable(); } };
-window.nextAdminPage = () => { const totalPages = Math.ceil(filteredMembers.length / rowsPerPage); if (currentPage < totalPages) { currentPage++; displayAdminTable(); } };
+window.prevAdminPage = () => {
+    if (currentPage > 1) { currentPage--; displayAdminTable(); }
+};
 
+window.nextAdminPage = () => {
+    const totalPages = Math.ceil(filteredMembers.length / rowsPerPage);
+    if (currentPage < totalPages) { currentPage++; displayAdminTable(); }
+};
+
+// ----------------------------------------------------
+// จัดการหน้าต่าง Form (Modal)
+// ----------------------------------------------------
+window.openModal = (mode, id = null) => {
+    document.getElementById('formMode').value = mode;
+
+    if (mode === 'add') {
+        document.getElementById('modalTitle').innerText = 'เพิ่มสมาชิกใหม่';
+        memberForm.reset();
+        document.getElementById('memberId').readOnly = false;
+        document.getElementById('docId').value = '';
+        populateCommunities(""); 
+        
+        document.getElementById('trash6Months').value = 0;
+
+        ['ben1Name', 'ben2Name', 'ben3Name', 'rec1Name', 'rec2Name', 'rec3Name'].forEach(field => document.getElementById(field).value = '');
+        ['ben1Status', 'ben2Status', 'ben3Status'].forEach(field => document.getElementById(field).value = 'ยังไม่รับ');
+
+        calculateBalance(); 
+    } else if (mode === 'edit') {
+        document.getElementById('modalTitle').innerText = 'แก้ไขข้อมูลสมาชิก';
+        const member = allMembers.find(m => m.id === id);
+        if (member) {
+            document.getElementById('docId').value = id;
+            document.getElementById('memberId').value = member.memberId || id;
+            document.getElementById('memberId').readOnly = true;
+            document.getElementById('memberName').value = member.name;
+            document.getElementById('memberZone').value = member.zone || '';
+            populateCommunities(member.zone || '', member.community || '');
+            document.getElementById('joinDate').value = member.joinDate || '';
+            
+            document.getElementById('deposit').value = member.deposit || 0;
+            document.getElementById('trashIncome').value = member.trashIncome || 0;
+            document.getElementById('withdraw').value = member.withdraw || 0;
+            document.getElementById('deduction').value = member.deduction || 0;
+            document.getElementById('trash6Months').value = member.trash6Months || 0;
+
+            document.getElementById('ben1Name').value = member.ben1Name || '';
+            document.getElementById('ben1Status').value = member.ben1Status || 'ยังไม่รับ';
+            document.getElementById('ben2Name').value = member.ben2Name || '';
+            document.getElementById('ben2Status').value = member.ben2Status || 'ยังไม่รับ';
+            document.getElementById('ben3Name').value = member.ben3Name || '';
+            document.getElementById('ben3Status').value = member.ben3Status || 'ยังไม่รับ';
+            
+            document.getElementById('rec1Name').value = member.rec1Name || '';
+            document.getElementById('rec2Name').value = member.rec2Name || '';
+            document.getElementById('rec3Name').value = member.rec3Name || '';
+            
+            calculateBalance(); 
+        }
+    }
+    memberModal.classList.remove('hidden');
+};
+
+window.closeModal = () => { memberModal.classList.add('hidden'); };
+
+// ----------------------------------------------------
+// บันทึกข้อมูลและสร้าง Transaction
+// ----------------------------------------------------
+memberForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const mode = document.getElementById('formMode').value;
+    const docId = document.getElementById('docId').value;
+    const mId = document.getElementById('memberId').value;
+    
+    calculateBalance();
+
+    const data = {
+        memberId: mId,
+        name: document.getElementById('memberName').value,
+        zone: document.getElementById('memberZone').value,
+        community: document.getElementById('memberCommunity').value,
+        joinDate: document.getElementById('joinDate').value,
+        deposit: parseFloat(document.getElementById('deposit').value) || 0,
+        trashIncome: parseFloat(document.getElementById('trashIncome').value) || 0, 
+        withdraw: parseFloat(document.getElementById('withdraw').value) || 0,
+        deduction: parseFloat(document.getElementById('deduction').value) || 0,
+        balance: parseFloat(document.getElementById('memberBalance').value) || 0, 
+        trash6Months: parseFloat(document.getElementById('trash6Months').value) || 0,
+        status: document.getElementById('memberStatus').value,
+        
+        ben1Name: document.getElementById('ben1Name').value.trim(),
+        ben1Status: document.getElementById('ben1Status').value,
+        ben2Name: document.getElementById('ben2Name').value.trim(),
+        ben2Status: document.getElementById('ben2Status').value,
+        ben3Name: document.getElementById('ben3Name').value.trim(),
+        ben3Status: document.getElementById('ben3Status').value,
+        rec1Name: document.getElementById('rec1Name').value.trim(),
+        rec2Name: document.getElementById('rec2Name').value.trim(),
+        rec3Name: document.getElementById('rec3Name').value.trim()
+    };
+
+    try {
+        if (mode === 'add') { await setDoc(doc(db, "members", mId), data); }
+        else if (mode === 'edit') { await updateDoc(doc(db, "members", docId), data); }
+        
+        closeModal();
+        alert('บันทึกข้อมูลเรียบร้อยแล้ว!');
+        fetchAdminMembers(); 
+    } catch (error) { alert('เกิดข้อผิดพลาด: ' + error.message); }
+});
+
+// ----------------------------------------------------
+// ระบบส่งออกข้อมูล (Export to Excel)
+// ----------------------------------------------------
 window.exportToExcel = () => {
     if (allMembers.length === 0) {
         alert('ไม่มีข้อมูลสมาชิกในระบบสำหรับส่งออกครับ');
@@ -507,6 +442,7 @@ window.exportToExcel = () => {
         'วันที่สมัคร': m.joinDate || '',
         'เงินฝาก': parseFloat(m.deposit || 0),
         'ขายขยะสะสม': parseFloat(m.trashIncome || 0),
+        'ขายขยะใน 6 เดือน': parseFloat(m.trash6Months || 0),
         'ถอนเงิน': parseFloat(m.withdraw || 0),
         'หักฌาปนกิจ': parseFloat(m.deduction || 0),
         'ยอดเงินคงเหลือ': parseFloat(m.balance || 0),
@@ -527,18 +463,27 @@ window.exportToExcel = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "ข้อมูลสมาชิก");
 
     const dateStr = new Date().toLocaleDateString('th-TH').replace(/\//g, '-');
-    XLSX.writeFile(workbook, `ข้อมูลสมาชิก_${dateStr}.xlsx`);
+    const fileName = `ข้อมูลสมาชิก_${dateStr}.xlsx`;
+
+    XLSX.writeFile(workbook, fileName);
 };
 
+// ----------------------------------------------------
+// ระบบลบสมาชิก
+// ----------------------------------------------------
 window.deleteMember = async (id) => {
     if (confirm('ยืนยันการลบสมาชิกรายนี้?')) {
         try { 
             await deleteDoc(doc(db, "members", id)); 
             fetchAdminMembers(); 
-        } catch (error) { alert('ลบไม่สำเร็จ: ' + error.message); }
+        }
+        catch (error) { alert('ลบไม่สำเร็จ: ' + error.message); }
     }
 };
 
+// ----------------------------------------------------
+// ระบบค้นหาสมาชิก (Search)
+// ----------------------------------------------------
 document.getElementById('adminSearchInput').addEventListener('input', (e) => {
     const term = e.target.value.trim().toLowerCase();
     if (term === '') {
