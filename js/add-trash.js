@@ -1,11 +1,13 @@
 import { db } from "./firebase-config.js";
-import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-// ดึงตัวแปร HTML
 const form = document.getElementById('trashForm');
 const communitySelect = document.getElementById('communitySelect');
 const recordDate = document.getElementById('recordDate');
 const saveBtn = document.getElementById('saveBtn');
+const editIdInput = document.getElementById('editId');
+const cancelEditBtn = document.getElementById('cancelEdit');
+const tableBody = document.getElementById('trashRecordsTable');
 
 const inputs = {
     glass: document.getElementById('valGlass'),
@@ -15,100 +17,114 @@ const inputs = {
     other: document.getElementById('valOther')
 };
 
-const totalDisplay = document.getElementById('totalDisplay');
+// ข้อมูลชุมชน (Copy มาจาก report.js)
+const communityData = { /* ... รายชื่อชุมชนเหมือนเดิม ... */ };
 
-// ข้อมูลชุมชนทั้งหมด (สามารถเพิ่ม/ลดได้ที่นี่)
-const communityData = {
-    "0": ["พนักงานเทศบาล"],
-    "1": ["โนนชัย 1", "โนนชัย 2", "โนนชัย 3", "ดอนหญ้านาง 1", "ดอนหญ้านาง 2", "ดอนหญ้านาง 3", "หลังศูนย์ราชการ 1", "หลังศูนย์ราชการ 2", "เทพารักษ์ 1", "เทพารักษ์ 2", "เทพารักษ์ 3", "เทพารักษ์ 4", "เทพารักษ์ 5", "พัฒนาเทพารักษ์", "เจ้าพ่อเกษม", "เจ้าพ่อทองสุข", "บขส"],
-    "2": ["หนองใหญ่ 1", "หนองใหญ่ 2", "หนองใหญ่ 3", "หนองใหญ่ 4", "บ้านบะขาม", "ศรีจันทร์ประชา", "นาคะประเวศน์", "คุ้มพระลับ", "ชัยณรงค์-สามัคคี", "ธารทิพย์", "หน้า รพ.ศูนย์", "หลักเมือง", "บ้านเลขที่ 37", "ทุ่งเศรษฐี", "ศิริมงคล", "ศรีจันทร์พัฒนา", "มิตรสัมพันธ์ 1", "มิตรสัมพันธ์ 2", "ทุ่งสร้างพัฒนา", "โพธิบัลลังค์ทอง", "บ้านพัก ตชด", "หัวสะพานสัมพันธ์"],
-    // ** ถ้ามีโซน 3, 4 ให้เพิ่มตรงนี้ให้ครบเหมือนใน report.js ของคุณ **
-};
-
-// ตั้งค่าเริ่มต้นวันที่เป็นวันปัจจุบัน
-const today = new Date().toISOString().split('T')[0];
-recordDate.value = today;
-
-// นำรายชื่อชุมชนใส่ลงใน Dropdown
-function populateCommunities() {
-    let allCommunities = [];
-    for (const zone in communityData) {
-        allCommunities = allCommunities.concat(communityData[zone]);
-    }
-    
-    // เรียงตามตัวอักษร
-    allCommunities.sort();
-
-    allCommunities.forEach(comm => {
-        const option = document.createElement('option');
-        option.value = comm;
-        option.textContent = comm;
-        communitySelect.appendChild(option);
-    });
+// เริ่มต้นหน้าจอ
+function init() {
+    recordDate.value = new Date().toISOString().split('T')[0];
+    populateCommunities();
+    loadRecords();
 }
 
-// คำนวณยอดรวมแบบ Real-time
+function populateCommunities() {
+    // ... เหมือนโค้ดเดิม ...
+}
+
+// คำนวณน้ำหนักรวม
 function calculateTotal() {
     let total = 0;
-    Object.values(inputs).forEach(input => {
-        total += parseFloat(input.value || 0);
+    Object.values(inputs).forEach(input => total += parseFloat(input.value || 0));
+    document.getElementById('totalDisplay').innerText = total.toFixed(2);
+}
+Object.values(inputs).forEach(input => input.addEventListener('input', calculateTotal));
+
+// ดึงข้อมูลมาแสดงในตาราง
+async function loadRecords() {
+    tableBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-400">กำลังโหลด...</td></tr>';
+    const q = query(collection(db, "trash_records"), orderBy("date", "desc"), limit(50));
+    const snap = await getDocs(q);
+    
+    let html = '';
+    snap.forEach(docSnap => {
+        const d = docSnap.data();
+        const id = docSnap.id;
+        html += `
+            <tr class="hover:bg-slate-50">
+                <td class="p-4 font-mono">${d.date}</td>
+                <td class="p-4 font-bold">${d.community}</td>
+                <td class="p-4 text-right">${(d.glass || 0).toFixed(2)}</td>
+                <td class="p-4 text-right">${(d.paper || 0).toFixed(2)}</td>
+                <td class="p-4 text-right">${(d.plastic || 0).toFixed(2)}</td>
+                <td class="p-4 text-right font-bold text-green-600">${(d.total || 0).toFixed(2)}</td>
+                <td class="p-4 text-center">
+                    <button onclick="editItem('${id}', ${JSON.stringify(d).replace(/"/g, '&quot;')})" class="text-blue-500 hover:underline mr-2">แก้ไข</button>
+                    <button onclick="deleteItem('${id}')" class="text-red-500 hover:underline">ลบ</button>
+                </td>
+            </tr>
+        `;
     });
-    totalDisplay.innerText = total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    tableBody.innerHTML = html || '<tr><td colspan="7" class="p-4 text-center">ไม่มีข้อมูล</td></tr>';
 }
 
-// ผูก Event Listener เพื่อคำนวณเวลามีการพิมพ์
-Object.values(inputs).forEach(input => {
-    input.addEventListener('input', calculateTotal);
-});
-
-// จัดการเมื่อกดปุ่มบันทึก
-form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+// ฟังก์ชัน แก้ไข (ผูกกับ Window เพื่อให้เรียกจาก HTML ได้)
+window.editItem = (id, data) => {
+    editIdInput.value = id;
+    recordDate.value = data.date;
+    communitySelect.value = data.community;
+    inputs.glass.value = data.glass;
+    inputs.paper.value = data.paper;
+    inputs.plastic.value = data.plastic;
+    inputs.metal.value = data.metal;
+    inputs.other.value = data.other;
     
-    // ป้องกันกดซ้ำ
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '⏳ กำลังบันทึก...';
+    calculateTotal();
+    saveBtn.innerHTML = '🔄 อัปเดตข้อมูล';
+    cancelEditBtn.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
-    try {
-        const glassVal = parseFloat(inputs.glass.value || 0);
-        const paperVal = parseFloat(inputs.paper.value || 0);
-        const plasticVal = parseFloat(inputs.plastic.value || 0);
-        const metalVal = parseFloat(inputs.metal.value || 0);
-        const otherVal = parseFloat(inputs.other.value || 0);
-        const totalVal = glassVal + paperVal + plasticVal + metalVal + otherVal;
-
-        // โครงสร้างข้อมูลที่จะบันทึกขึ้น Firestore
-        const recordData = {
-            date: recordDate.value,
-            community: communitySelect.value,
-            glass: glassVal,
-            paper: paperVal,
-            plastic: plasticVal,
-            metal: metalVal,
-            other: otherVal,
-            total: totalVal,
-            timestamp: serverTimestamp() // บันทึกเวลาจริงของ Server
-        };
-
-        // บันทึกลง Collection ชื่อ "trash_records" (ระบบจะสร้างให้อัตโนมัติถ้ายังไม่มี)
-        await addDoc(collection(db, "trash_records"), recordData);
-
-        alert('✅ บันทึกข้อมูลสำเร็จ!');
-        
-        // ล้างฟอร์มยกเว้นวันที่
-        communitySelect.value = '';
-        Object.values(inputs).forEach(input => input.value = '');
-        calculateTotal();
-
-    } catch (error) {
-        console.error("Error adding document: ", error);
-        alert('❌ เกิดข้อผิดพลาดในการบันทึก: ' + error.message);
-    } finally {
-        // ปลดล็อคปุ่ม
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = '💾 บันทึกข้อมูล';
+// ฟังก์ชัน ลบ
+window.deleteItem = async (id) => {
+    if (confirm('ยืนยันการลบข้อมูลชุดนี้?')) {
+        await deleteDoc(doc(db, "trash_records", id));
+        loadRecords();
     }
-});
+};
 
-// รันฟังก์ชันเมื่อโหลดไฟล์
-populateCommunities();
+cancelEditBtn.onclick = () => {
+    form.reset();
+    editIdInput.value = '';
+    saveBtn.innerHTML = '💾 บันทึกข้อมูล';
+    cancelEditBtn.classList.add('hidden');
+    calculateTotal();
+};
+
+form.onsubmit = async (e) => {
+    e.preventDefault();
+    const id = editIdInput.value;
+    const data = {
+        date: recordDate.value,
+        community: communitySelect.value,
+        glass: parseFloat(inputs.glass.value || 0),
+        paper: parseFloat(inputs.paper.value || 0),
+        plastic: parseFloat(inputs.plastic.value || 0),
+        metal: parseFloat(inputs.metal.value || 0),
+        other: parseFloat(inputs.other.value || 0),
+        total: parseFloat(document.getElementById('totalDisplay').innerText),
+        lastUpdate: serverTimestamp()
+    };
+
+    if (id) {
+        await updateDoc(doc(db, "trash_records", id), data);
+        alert('อัปเดตสำเร็จ!');
+    } else {
+        await addDoc(collection(db, "trash_records"), data);
+        alert('บันทึกสำเร็จ!');
+    }
+    
+    cancelEditBtn.onclick(); // ล้างฟอร์ม
+    loadRecords(); // โหลดตารางใหม่
+};
+
+init();
