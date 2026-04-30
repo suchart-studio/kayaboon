@@ -85,7 +85,7 @@ function displayMembers() {
                         <p class="text-xs font-bold text-slate-700">฿${(m.deposit || 0).toLocaleString()}</p>
                     </div>
                     <div class="text-center border-r border-slate-200">
-                        <p class="text-[9px] text-slate-400 font-bold uppercase">ขยะ</p>
+                        <p class="text-[9px] text-slate-400 font-bold uppercase">ขยะรวม</p>
                         <p class="text-xs font-bold text-slate-700">฿${(m.trashIncome || 0).toLocaleString()}</p>
                     </div>
                     <div class="text-center">
@@ -106,15 +106,15 @@ function displayMembers() {
                             <div class="space-y-1.5">
                                 <div class="flex justify-between items-center text-xs">
                                     <span class="text-gray-700">1. ${m.ben1Name || '-'}</span>
-                                    <span class="w-3.5 h-3.5 rounded-full border border-white shadow-sm ${m.ben1Status === 'รับแล้ว' ? 'bg-green-500' : 'bg-red-400'}"></span>
+                                    <span class="w-3.5 h-3.5 rounded-full border border-white shadow-sm ${m.ben1Status === 'รับแล้ว' ? 'bg-red-500' : 'bg-green-500'}"></span>
                                 </div>
                                 <div class="flex justify-between items-center text-xs">
                                     <span class="text-gray-700">2. ${m.ben2Name || '-'}</span>
-                                    <span class="w-3.5 h-3.5 rounded-full border border-white shadow-sm ${m.ben2Status === 'รับแล้ว' ? 'bg-green-500' : 'bg-red-400'}"></span>
+                                    <span class="w-3.5 h-3.5 rounded-full border border-white shadow-sm ${m.ben2Status === 'รับแล้ว' ? 'bg-red-500' : 'bg-green-500'}"></span>
                                 </div>
                                 <div class="flex justify-between items-center text-xs">
                                     <span class="text-gray-700">3. ${m.ben3Name || '-'}</span>
-                                    <span class="w-3.5 h-3.5 rounded-full border border-white shadow-sm ${m.ben3Status === 'รับแล้ว' ? 'bg-green-500' : 'bg-red-400'}"></span>
+                                    <span class="w-3.5 h-3.5 rounded-full border border-white shadow-sm ${m.ben3Status === 'รับแล้ว' ? 'bg-red-500' : 'bg-green-500'}"></span>
                                 </div>
                             </div>
                         </div>
