@@ -3,52 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เปลี่ยนขยะเป็นบุญ</title>
+    <title>กองทุนฌาปนกิจเปลี่ยนขยะเป็นบุญ</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: 'Chakra Petch', sans-serif; background-color: #f3f4f6; }
-        ::-webkit-scrollbar { display: none; }
+        body {
+            font-family: 'Chakra Petch', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
     </style>
 </head>
-<body class="p-4 md:py-8 max-w-md mx-auto min-h-screen flex flex-col relative">
+<body class="text-slate-800">
 
-    <header class="text-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-        <img src="logo.png" alt="โลโก้กองทุน" class="w-24 h-24 mx-auto mb-3 object-contain">
-        
-        <h1 class="text-xl font-bold text-green-700">เปลี่ยนขยะเป็นบุญ</h1>
-        <p class="text-sm text-gray-500">เทศบาลนครขอนแก่น</p>
-    </header>
-
-    <div class="grid grid-cols-2 gap-3 mb-6">
-        <div class="col-span-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 rounded-2xl shadow-md text-center">
-            <p class="text-sm opacity-90 mb-1">ยอดเงินกองทุนรวม (บาท)</p>
-            <h2 id="summaryTotalBalance" class="text-3xl font-bold tracking-wider">฿0.00</h2>
+    <div class="max-w-md mx-auto px-4 py-8">
+        <div class="text-center mb-8">
+            <div class="bg-blue-600 w-20 h-20 rounded-3xl shadow-lg flex items-center justify-center mx-auto mb-4">
+                <span class="text-4xl">♻️</span>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-800">กองทุนขยะเป็นบุญ</h1>
+            <p class="text-slate-500 text-sm">ตรวจสอบข้อมูลสมาชิกและเงินคงเหลือ</p>
         </div>
-        <div class="bg-white border border-gray-100 p-4 rounded-2xl shadow-sm text-center">
-            <p class="text-xs text-gray-500 mb-1">สมาชิกทั้งหมด</p>
-            <h2 id="summaryTotalMembers" class="text-2xl font-bold text-gray-800">0</h2>
+
+        <div class="glass-card p-6 rounded-3xl shadow-xl mb-6">
+            <label class="block text-sm font-bold text-slate-700 mb-2">ค้นหาด้วยเลขสมาชิก หรือ ชื่อ-สกุล</label>
+            <div class="relative">
+                <input type="text" id="searchInput" 
+                    class="w-full p-4 pr-12 rounded-2xl border-2 border-slate-100 focus:border-blue-500 focus:outline-none transition-all text-lg shadow-sm"
+                    placeholder="ตัวอย่าง: 001 หรือ สมชาย">
+                <button id="searchBtn" class="absolute right-2 top-2 bg-blue-600 text-white p-2.5 rounded-xl hover:bg-blue-700 transition">
+                    🔍
+                </button>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-3 text-center">* ค้นหาได้เฉพาะสมาชิกที่ลงทะเบียนในระบบแล้วเท่านั้น</p>
         </div>
-        <div class="bg-white border border-gray-100 p-4 rounded-2xl shadow-sm text-center">
-            <p class="text-xs text-gray-500 mb-1">สถานะ: ผ่าน / ไม่ผ่าน</p>
-            <h2 class="text-xl font-bold text-gray-800"><span id="summaryActive" class="text-green-600">0</span> <span class="text-gray-400 font-medium text-sm">/</span> <span id="summaryInactive" class="text-red-500">0</span></h2>
+
+        <div id="resultCard" class="hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div class="glass-card rounded-3xl shadow-xl overflow-hidden border-t-8 border-blue-600">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">รหัสสมาชิก: <span id="resId" class="text-blue-600"></span></p>
+                            <h2 id="resName" class="text-2xl font-bold text-slate-800"></h2>
+                        </div>
+                        <span id="resStatusBadge" class="px-3 py-1 rounded-full text-xs font-bold"></span>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-2xl p-4 mb-4 grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-[10px] text-slate-400 font-bold">เขต/ชุมชน</p>
+                            <p id="resCommunity" class="text-sm font-bold text-slate-700"></p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] text-slate-400 font-bold">วันที่สมัคร</p>
+                            <p id="resDate" class="text-sm font-bold text-slate-700"></p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center py-2 border-b border-slate-50">
+                            <span class="text-sm text-slate-500">เงินฝากสะสม</span>
+                            <span id="resDeposit" class="font-bold text-slate-700"></span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-slate-50">
+                            <span class="text-sm text-slate-500">ขายขยะสะสม</span>
+                            <span id="resTrash" class="font-bold text-indigo-600"></span>
+                        </div>
+                        <div class="flex justify-between items-center py-4">
+                            <span class="text-lg font-bold text-slate-800">ยอดคงเหลือสุทธิ</span>
+                            <span id="resBalance" class="text-2xl font-black text-blue-600"></span>
+                        </div>
+                    </div>
+
+                    <div id="resWarning" class="hidden mt-2 p-3 bg-red-50 text-red-600 text-[11px] rounded-xl text-center font-bold">
+                        ⚠️ ยอดเงินไม่ถึง 300 บาท หรือ รับสิทธิ์แล้ว กรุณาติดต่อเจ้าหน้าที่
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <div id="notFound" class="hidden text-center p-8 bg-white/50 rounded-3xl border-2 border-dashed border-slate-200">
+            <p class="text-slate-400">❌ ไม่พบข้อมูลสมาชิกที่คุณค้นหา</p>
+        </div>
+
+        <footer class="mt-12 text-center">
+            <a href="admin.html" class="text-slate-400 text-xs hover:text-blue-500 transition underline">เข้าสู่ระบบผู้ดูแล (Admin)</a>
+            <p class="text-[10px] text-slate-300 mt-4">© 2024 กองทุนฌาปนกิจเปลี่ยนขยะเป็นบุญ เทศบาลนครขอนแก่น</p>
+        </footer>
     </div>
 
-    <div class="mb-4 sticky top-2 z-10">
-        <input type="text" id="searchInput" placeholder="🔍 ค้นหาชื่อ, รหัส หรือ ชุมชน..." class="w-full p-3 rounded-xl border border-gray-200 shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
-    </div>
+    <script type="module">
+        import { db } from "./js/firebase-config.js";
+        import { collection, query, where, getDocs, or } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-    <div id="memberList" class="space-y-3 pb-4">
-        <div class="text-center text-gray-500 py-10 animate-pulse">กำลังโหลดข้อมูล...</div>
-    </div>
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const resultCard = document.getElementById('resultCard');
+        const notFound = document.getElementById('notFound');
 
-    <div id="userPaginationControls" class="flex justify-between items-center mb-10 mt-2 bg-white p-3 rounded-xl shadow-sm border border-gray-100 hidden">
-        <button onclick="prevUserPage()" class="px-4 py-2 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg font-bold text-sm shadow-sm active:bg-gray-200">⬅️</button>
-        <span id="userPageInfo" class="text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-md">1 / 1</span>
-        <button onclick="nextUserPage()" class="px-4 py-2 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg font-bold text-sm shadow-sm active:bg-gray-200">➡️</button>
-    </div>
+        async function performSearch() {
+            const term = searchInput.value.trim();
+            if (!term) return;
 
-    <script type="module" src="js/app.js"></script>
+            // Show Loading State
+            searchBtn.innerHTML = '...';
+            resultCard.classList.add('hidden');
+            notFound.classList.add('hidden');
+
+            try {
+                // ค้นหาแบบยืดหยุ่น: เลขสมาชิก หรือ ชื่อ-สกุล
+                const q = query(
+                    collection(db, "members"),
+                    or(
+                        where("memberId", "==", term),
+                        where("name", "==", term)
+                    )
+                );
+
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    notFound.classList.remove('hidden');
+                } else {
+                    const member = querySnapshot.docs[0].data();
+                    displayResult(member);
+                }
+            } catch (error) {
+                console.error("Search error:", error);
+                alert("เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล");
+            } finally {
+                searchBtn.innerHTML = '🔍';
+            }
+        }
+
+        function displayResult(m) {
+            document.getElementById('resId').innerText = m.memberId || '-';
+            document.getElementById('resName').innerText = m.name || '-';
+            document.getElementById('resCommunity').innerText = `${m.community || '-'} (ข.${m.zone || '-'})`;
+            document.getElementById('resDate').innerText = m.joinDate || '-';
+            
+            document.getElementById('resDeposit').innerText = `฿${parseFloat(m.deposit || 0).toLocaleString()}`;
+            document.getElementById('resTrash').innerText = `฿${parseFloat(m.trashIncome || 0).toLocaleString()}`;
+            document.getElementById('resBalance').innerText = `฿${parseFloat(m.balance || 0).toLocaleString()}`;
+
+            const badge = document.getElementById('resStatusBadge');
+            const warning = document.getElementById('resWarning');
+
+            if (m.status === 'ผ่านเกณฑ์') {
+                badge.innerText = '✅ ผ่านเกณฑ์';
+                badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700';
+                warning.classList.add('hidden');
+            } else {
+                badge.innerText = '❌ ไม่ผ่านเกณฑ์';
+                badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700';
+                warning.classList.remove('hidden');
+            }
+
+            resultCard.classList.remove('hidden');
+        }
+
+        searchBtn.addEventListener('click', performSearch);
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+
+        // ----------------------------------------------------
+        // PWA Service Worker Registration
+        // ----------------------------------------------------
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW Registered'))
+                    .catch(err => console.log('SW Reg Error', err));
+            });
+        }
+    </script>
 </body>
 </html>
