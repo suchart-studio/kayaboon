@@ -52,7 +52,7 @@ window.logoutAdmin = () => {
 const communityData = {
     "0": ["พนักงานเทศบาล"],
     "1": ["โนนชัย 1", "โนนชัย 2", "โนนชัย 3", "ดอนหญ้านาง 1", "ดอนหญ้านาง 2", "ดอนหญ้านาง 3", "หลังศูนย์ราชการ 1", "หลังศูนย์ราชการ 2", "เทพารักษ์ 1", "เทพารักษ์ 2", "เทพารักษ์ 3", "เทพารักษ์ 4", "เทพารักษ์ 5", "พัฒนาเทพารักษ์", "เจ้าพ่อเกษม", "เจ้าพ่อทองสุข", "บขส"],
-    "2": ["หนองใหญ่ 1", "หนองใหญ่ 2", "หนองใหญ่ 3", "หนองใหญ่ 4", "บ้านบะขาม", "ศรีจันทร์ประชา", "นาคะประเวศน์", "คุ้มพระลับ", "ชัยณรงค์-สามัคคี", "ธารทิพย์", "หน้า รพ.ศูนย์", "หลักเมือง", "บ้านเลขที่ 37", "ทุ่งเศรษฐี", "ศิริมงคล", "ศรีจันทร์พัฒนา", "มิตรสัมพันธ์ 1", "มิตรสัมพันธ์ 2", "ทุ่งสร้างพัฒนา", "โพธิบัลลังค์ทอง", "บ้านพัก ตชด", "หัวสะพานสัมพันธ์", "ชลประทาน", "เจ้าพ่อขุนภักดี", "ธนาคร", "คุ้มหนองคู", "ศรีจันทร์", "ตรีเทพนครขอนแก่น"],
+    "2": ["หนองใหญ่ 1", "หนองใหญ่ 2", "หนองใหญ่ 3", "หนองใหญ่ 4", "บ้านบะขาม", "ศรีจันทร์ประชา", "นาคะประเวศน์", "คุ้มพระลับ", "ชัยณรงค์-สามัคคี", "ธารทิพย์", "หน้า รพ.ศูนย์", "หลักเมือง", "บ้านเลขที่ 37", "ทุ่งเศรษฐี", "ศิริมงคล", "ศรีจันทร์พัฒนา", "มิตรสัมพันธ์ 1", "มิตรสัมพันธ์ 2", "ทุ่งสร้างพัฒนา", "โพธิบัลลังค์ทอง", "บ้านพัก ตชด", "หัวสะพานสัมพันธ์", "เจ้าพ่อขุนภักดี", "ธนาคร", "คุ้มหนองคู", "ศรีจันทร์", "ตรีเทพนครขอนแก่น"],
     "3": ["บ้านตูม", "เมืองเก่า 1", "เมืองเก่า 2", "เมืองเก่า 3", "เมืองเก่า 4", "คุ้มวัดกลาง", "คุ้มวัดธาตุ", "หลังสนามกีฬา 1", "หลังสนามกีฬา 2", "แก่นนคร", "กศน.", "โนนหนองวัด 1", "โนนหนองวัด 2", "โนนหนองวัด 3", "โนนหนองวัด 4", "หนองวัดพัฒนา", "คุ้มวุฒาราม", "โนนทัน1", "โนนทัน2", "โนนทัน3", "โนนทัน4", "โนนทัน5", "โนนทัน 6", "โนนทัน7", "โนนทัน8", "โนนทัน9", "การเคหะ", "เหล่านาดี12", "พระนครศรีบริรักษ์", "พิมานชลร่วมใจ", "95 ก้าวหน้านคร"],
     "4": ["สามเหลี่ยม 1", "สามเหลี่ยม 2", "สามเหลี่ยม 3", "สามเหลี่ยม 4", "สามเหลี่ยม 5", "ศรีฐาน 1", "ศรีฐาน 2", "ศรีฐาน 3", "ศรีฐาน 4", "หนองแวงตราชู 1", "หนองแวงตราชู 2", "หนองแวงตราชู 3", "หนองแวงตราชู 4", "คุ้มวัดป่าอดุลยาราม", "ไทยสมุทร", "เทคโนภาค", "ตะวันใหม่", "มิตรภาพ", "ตลาดต้นตาล"]
 };
@@ -75,6 +75,43 @@ function populateCommunities(zoneValue, selectedCommunity = "") {
     }
 }
 
+// ----------------------------------------------------
+// ฟังก์ชันคำนวณสถานะสมาชิก (เงื่อนไขใหม่ 4 ระดับ + ระยะเวลา)
+// ----------------------------------------------------
+function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
+    const bal = parseFloat(balance || 0);
+    const claimedCount = [ben1, ben2, ben3].filter(s => s === 'รับแล้ว' || s === 'รับสิทธิ์แล้ว').length;
+    
+    if (claimedCount >= 3) {
+        return { text: "รับสิทธิ์ครบแล้ว", class: "bg-blue-100 text-blue-700 border-blue-400" };
+    }
+
+    // คำนวณเดือนที่ผ่านไปจากการอัปเดตล่าสุด (ถ้าไม่มี ให้ถือว่าเป็นปัจจุบัน)
+    const dateToUse = lastUpdate || new Date().toISOString();
+    const lastDate = new Date(dateToUse);
+    const now = new Date();
+    const diffTime = Math.abs(now - lastDate);
+    const monthsPassed = diffTime / (1000 * 60 * 60 * 24 * 30.44); // แปลงเป็นเดือนโดยประมาณ
+
+    if (bal >= 300) {
+        if (monthsPassed <= 6) {
+            return { text: "ยอดเยี่ยม", class: "bg-green-100 text-green-700 border-green-500" };
+        } else {
+            return { text: "ยอดเยี่ยม (ขาดอัปเดต)", class: "bg-emerald-50 text-emerald-600 border-emerald-300" };
+        }
+    } else { // เงินไม่ถึง 300 บาท
+        if (monthsPassed > 6) {
+            return { text: "สิ้นสภาพ", class: "bg-gray-200 text-gray-800 border-gray-500" };
+        } else if (monthsPassed > 4) {
+            return { text: "แย่แล้วล่ะ", class: "bg-red-100 text-red-700 border-red-500" };
+        } else if (monthsPassed > 2) {
+            return { text: "ยุ่งล่ะสิ", class: "bg-yellow-100 text-yellow-700 border-yellow-500" };
+        } else {
+            return { text: "ปกติ (กำลังสะสม)", class: "bg-sky-100 text-sky-700 border-sky-400" };
+        }
+    }
+}
+
 function updateAdminDashboardSummary(members) {
     let totalBalance = 0;
     let activeCount = 0;
@@ -82,7 +119,8 @@ function updateAdminDashboardSummary(members) {
 
     members.forEach(m => {
         totalBalance += parseFloat(m.balance || 0);
-        if (m.status === 'ผ่านเกณฑ์') activeCount++;
+        // ถือว่าเงิน >= 300 คือผ่านเกณฑ์ในแง่สรุปตัวเลขภาพรวม
+        if (parseFloat(m.balance || 0) >= 300) activeCount++;
         else inactiveCount++;
     });
 
@@ -93,7 +131,7 @@ function updateAdminDashboardSummary(members) {
 }
 
 // ----------------------------------------------------
-// ระบบคำนวณเงินและสถานะ
+// ระบบคำนวณเงินและอัปเดตหน้าจอ Modal แบบ Real-time
 // ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
 const trashIncomeInput = document.getElementById('trashIncome'); 
@@ -111,19 +149,29 @@ function calculateBalance() {
     const currentBalance = (d + tAccum) - w - ded;
     balanceInput.value = currentBalance.toFixed(2); 
 
-    // เงื่อนไขสถานะใหม่: คิดจากเงิน >= 300 อย่างเดียว
-    if (currentBalance >= 300) {
-        statusInput.value = 'ผ่านเกณฑ์';
-        statusInput.className = "w-full p-2 text-center border-2 border-green-500 rounded-lg bg-green-100 text-green-700 font-bold";
-    } else {
-        statusInput.value = 'ไม่ผ่านเกณฑ์';
-        statusInput.className = "w-full p-2 text-center border-2 border-red-500 rounded-lg bg-red-100 text-red-700 font-bold";
-    }
+    // ดึงค่าผู้รับสิทธิ์มาเช็คสถานะสดๆ ใน Modal (ยึดเวลาปัจจุบันเพราะกำลังจะอัปเดต)
+    const ben1 = document.getElementById('ben1Status') ? document.getElementById('ben1Status').value : 'ยังไม่รับ';
+    const ben2 = document.getElementById('ben2Status') ? document.getElementById('ben2Status').value : 'ยังไม่รับ';
+    const ben3 = document.getElementById('ben3Status') ? document.getElementById('ben3Status').value : 'ยังไม่รับ';
+    
+    // จำลองส่งเวลาปัจจุบันเข้าไปเพื่อดูสถานะ ณ วันที่จะบันทึก
+    const statusData = getMemberStatus(currentBalance, ben1, ben2, ben3, new Date().toISOString());
+
+    statusInput.value = statusData.text;
+    statusInput.className = `w-1/3 p-2 text-center border-2 rounded-lg font-bold ${statusData.class}`;
 }
 
 document.querySelectorAll('.calc-input').forEach(input => {
     input.addEventListener('input', calculateBalance);
     input.addEventListener('change', calculateBalance);
+});
+
+// ฟังการเปลี่ยนสถานะผู้รับสิทธิ์เพื่อคำนวณใหม่
+['ben1Status', 'ben2Status', 'ben3Status'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) {
+        el.addEventListener('change', calculateBalance);
+    }
 });
 
 // ----------------------------------------------------
@@ -152,6 +200,7 @@ async function importExcelToFirebase(data) {
     let count = 0;
     let batches = [];
     let batch = writeBatch(db);
+    const currentTime = new Date().toISOString();
     
     for(let i=0; i<data.length; i++) {
         let row = data[i];
@@ -163,11 +212,7 @@ async function importExcelToFirebase(data) {
         const w = parseFloat(row['ถอนเงิน'] || 0);
         const ded = parseFloat(row['หักฌาปนกิจ'] || 0);
         const forceCalculatedBalance = (d + t) - w - ded;
-
         const t6m = parseFloat(row['ขายขยะใน 6 เดือน'] || row['ขยะ 6 เดือน'] || 0);
-
-        // คำนวณสถานะใหม่
-        const autoStatus = (forceCalculatedBalance >= 300) ? 'ผ่านเกณฑ์' : 'ไม่ผ่านเกณฑ์';
 
         const mId = String(row['เลขสมาชิก'] || row['รหัสสมาชิก'] || (Date.now() + count));
         const memberData = {
@@ -182,7 +227,10 @@ async function importExcelToFirebase(data) {
             deduction: ded,
             balance: forceCalculatedBalance, 
             trash6Months: t6m,
-            status: autoStatus
+            ben1Status: 'ยังไม่รับ',
+            ben2Status: 'ยังไม่รับ',
+            ben3Status: 'ยังไม่รับ',
+            lastUpdate: currentTime // บันทึกเวลาอัปเดต
         };
 
         const docRef = doc(db, "members", mId);
@@ -284,24 +332,25 @@ function displayAdminTable() {
 
     let htmlString = '';
     displayData.forEach(member => {
-        const statusClass = member.status === 'ผ่านเกณฑ์' ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100';
+        // ประเมินสถานะของสมาชิกแต่ละคน
+        const statusObj = getMemberStatus(member.balance, member.ben1Status, member.ben2Status, member.ben3Status, member.lastUpdate);
         const commText = member.community ? `${member.community}` : '-';
 
         htmlString += `
             <tr class="hover:bg-blue-50 transition-colors border-b border-gray-100">
                 <td class="p-3 font-mono text-gray-600">${member.memberId || member.id}</td>
                 <td class="p-3 font-bold text-gray-800">${member.name}</td>
-                <td class="p-3 text-blue-600 text-xs">${commText} (ข.${member.zone})</td>
+                <td class="p-3 text-blue-600 text-xs">${commText} (ข.${member.zone || '-'})</td>
                 <td class="p-3 text-right text-green-600">${parseFloat(member.deposit || 0).toLocaleString()}</td>
                 <td class="p-3 text-right text-indigo-600 font-bold">${parseFloat(member.trashIncome || 0).toLocaleString()}</td>
                 <td class="p-3 text-right text-yellow-600">${parseFloat(member.trash6Months || 0).toLocaleString()}</td>
                 <td class="p-3 text-right font-bold text-blue-700 bg-blue-50/50">฿${parseFloat(member.balance || 0).toLocaleString()}</td>
                 <td class="p-3 text-center">
-                    <span class="px-3 py-1 rounded-full text-xs font-bold ${statusClass}">${member.status}</span>
+                    <span class="px-3 py-1 rounded-full text-[11px] font-bold border ${statusObj.class}">${statusObj.text}</span>
                 </td>
                 <td class="p-3 text-center space-x-2">
-                    <button onclick="openModal('edit', '${member.id}')" class="text-blue-500 hover:text-blue-800 font-bold underline">แก้ไข</button>
-                    <button onclick="deleteMember('${member.id}')" class="text-red-400 hover:text-red-700 font-bold underline">ลบ</button>
+                    <button onclick="openModal('edit', '${member.id}')" class="text-blue-500 hover:text-blue-800 font-bold underline text-sm">แก้ไข</button>
+                    <button onclick="deleteMember('${member.id}')" class="text-red-400 hover:text-red-700 font-bold underline text-sm">ลบ</button>
                 </td>
             </tr>
         `;
@@ -336,8 +385,12 @@ window.openModal = (mode, id = null) => {
         
         document.getElementById('trash6Months').value = 0;
 
-        ['ben1Name', 'ben2Name', 'ben3Name', 'rec1Name', 'rec2Name', 'rec3Name'].forEach(field => document.getElementById(field).value = '');
-        ['ben1Status', 'ben2Status', 'ben3Status'].forEach(field => document.getElementById(field).value = 'ยังไม่รับ');
+        ['ben1Name', 'ben2Name', 'ben3Name', 'rec1Name', 'rec2Name', 'rec3Name'].forEach(field => {
+            if(document.getElementById(field)) document.getElementById(field).value = '';
+        });
+        ['ben1Status', 'ben2Status', 'ben3Status'].forEach(field => {
+            if(document.getElementById(field)) document.getElementById(field).value = 'ยังไม่รับ';
+        });
 
         calculateBalance(); 
     } else if (mode === 'edit') {
@@ -358,17 +411,19 @@ window.openModal = (mode, id = null) => {
             document.getElementById('deduction').value = member.deduction || 0;
             document.getElementById('trash6Months').value = member.trash6Months || 0;
 
-            document.getElementById('ben1Name').value = member.ben1Name || '';
-            document.getElementById('ben1Status').value = member.ben1Status || 'ยังไม่รับ';
-            document.getElementById('ben2Name').value = member.ben2Name || '';
-            document.getElementById('ben2Status').value = member.ben2Status || 'ยังไม่รับ';
-            document.getElementById('ben3Name').value = member.ben3Name || '';
-            document.getElementById('ben3Status').value = member.ben3Status || 'ยังไม่รับ';
+            if(document.getElementById('ben1Name')) document.getElementById('ben1Name').value = member.ben1Name || '';
+            if(document.getElementById('ben1Status')) document.getElementById('ben1Status').value = member.ben1Status || 'ยังไม่รับ';
+            if(document.getElementById('ben2Name')) document.getElementById('ben2Name').value = member.ben2Name || '';
+            if(document.getElementById('ben2Status')) document.getElementById('ben2Status').value = member.ben2Status || 'ยังไม่รับ';
+            if(document.getElementById('ben3Name')) document.getElementById('ben3Name').value = member.ben3Name || '';
+            if(document.getElementById('ben3Status')) document.getElementById('ben3Status').value = member.ben3Status || 'ยังไม่รับ';
             
-            document.getElementById('rec1Name').value = member.rec1Name || '';
-            document.getElementById('rec2Name').value = member.rec2Name || '';
-            document.getElementById('rec3Name').value = member.rec3Name || '';
+            if(document.getElementById('rec1Name')) document.getElementById('rec1Name').value = member.rec1Name || '';
+            if(document.getElementById('rec2Name')) document.getElementById('rec2Name').value = member.rec2Name || '';
+            if(document.getElementById('rec3Name')) document.getElementById('rec3Name').value = member.rec3Name || '';
             
+            // ส่งเวลาที่มีอยู่ในระบบ (เพื่อแสดงสถานะตอนที่ยังไม่ได้บันทึกแก้ไข)
+            window._tempLastUpdate = member.lastUpdate; 
             calculateBalance(); 
         }
     }
@@ -378,7 +433,7 @@ window.openModal = (mode, id = null) => {
 window.closeModal = () => { memberModal.classList.add('hidden'); };
 
 // ----------------------------------------------------
-// บันทึกข้อมูลและสร้าง Transaction
+// บันทึกข้อมูล (อัปเดต LastUpdate ด้วย)
 // ----------------------------------------------------
 memberForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -387,6 +442,9 @@ memberForm.addEventListener('submit', async (e) => {
     const mId = document.getElementById('memberId').value;
     
     calculateBalance();
+    
+    // กำหนดเวลาปัจจุบันที่กดบันทึก
+    const currentTime = new Date().toISOString();
 
     const data = {
         memberId: mId,
@@ -400,25 +458,33 @@ memberForm.addEventListener('submit', async (e) => {
         deduction: parseFloat(document.getElementById('deduction').value) || 0,
         balance: parseFloat(document.getElementById('memberBalance').value) || 0, 
         trash6Months: parseFloat(document.getElementById('trash6Months').value) || 0,
-        status: document.getElementById('memberStatus').value,
         
-        ben1Name: document.getElementById('ben1Name').value.trim(),
-        ben1Status: document.getElementById('ben1Status').value,
-        ben2Name: document.getElementById('ben2Name').value.trim(),
-        ben2Status: document.getElementById('ben2Status').value,
-        ben3Name: document.getElementById('ben3Name').value.trim(),
-        ben3Status: document.getElementById('ben3Status').value,
-        rec1Name: document.getElementById('rec1Name').value.trim(),
-        rec2Name: document.getElementById('rec2Name').value.trim(),
-        rec3Name: document.getElementById('rec3Name').value.trim()
+        lastUpdate: currentTime // << บันทึกเวลาที่อัปเดตล่าสุด
     };
+
+    // เก็บฟิลด์ผู้รับสิทธิ์ (ถ้ามีใน HTML)
+    if(document.getElementById('ben1Name')) {
+        data.ben1Name = document.getElementById('ben1Name').value.trim();
+        data.ben1Status = document.getElementById('ben1Status').value;
+        data.ben2Name = document.getElementById('ben2Name').value.trim();
+        data.ben2Status = document.getElementById('ben2Status').value;
+        data.ben3Name = document.getElementById('ben3Name').value.trim();
+        data.ben3Status = document.getElementById('ben3Status').value;
+        data.rec1Name = document.getElementById('rec1Name').value.trim();
+        data.rec2Name = document.getElementById('rec2Name').value.trim();
+        data.rec3Name = document.getElementById('rec3Name').value.trim();
+        
+        // ประเมิน Status ก่อนลงฐานข้อมูล (ใช้เวลาปัจจุบันที่เพิ่งกดบันทึก)
+        const evaluatedStatus = getMemberStatus(data.balance, data.ben1Status, data.ben2Status, data.ben3Status, currentTime);
+        data.status = evaluatedStatus.text; 
+    }
 
     try {
         if (mode === 'add') { await setDoc(doc(db, "members", mId), data); }
         else if (mode === 'edit') { await updateDoc(doc(db, "members", docId), data); }
         
         closeModal();
-        alert('บันทึกข้อมูลเรียบร้อยแล้ว!');
+        alert('บันทึกข้อมูลและอัปเดตสถานะล่าสุดเรียบร้อยแล้ว!');
         fetchAdminMembers(); 
     } catch (error) { alert('เกิดข้อผิดพลาด: ' + error.message); }
 });
@@ -434,29 +500,30 @@ window.exportToExcel = () => {
 
     alert('กำลังเตรียมไฟล์ Excel กรุณารอสักครู่...');
 
-    const exportData = allMembers.map(m => ({
-        'เลขสมาชิก': m.memberId || m.id,
-        'ชื่อ-สกุล': m.name || '',
-        'เขต': m.zone || '',
-        'ชุมชน': m.community || '',
-        'วันที่สมัคร': m.joinDate || '',
-        'เงินฝาก': parseFloat(m.deposit || 0),
-        'ขายขยะสะสม': parseFloat(m.trashIncome || 0),
-        'ขายขยะใน 6 เดือน': parseFloat(m.trash6Months || 0),
-        'ถอนเงิน': parseFloat(m.withdraw || 0),
-        'หักฌาปนกิจ': parseFloat(m.deduction || 0),
-        'ยอดเงินคงเหลือ': parseFloat(m.balance || 0),
-        'สถานะสมาชิก': m.status || 'ไม่ผ่านเกณฑ์',
-        'ผู้รับสิทธิ์คนที่ 1': m.ben1Name || '',
-        'สถานะ 1': m.ben1Status || '',
-        'ผู้รับสิทธิ์คนที่ 2': m.ben2Name || '',
-        'สถานะ 2': m.ben2Status || '',
-        'ผู้รับสิทธิ์คนที่ 3': m.ben3Name || '',
-        'สถานะ 3': m.ben3Status || '',
-        'ผู้รับเงินลำดับ 1': m.rec1Name || '',
-        'ผู้รับเงินลำดับ 2': m.rec2Name || '',
-        'ผู้รับเงินลำดับ 3': m.rec3Name || '',
-    }));
+    const exportData = filteredMembers.map(m => {
+        const stat = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.lastUpdate);
+        return {
+            'เลขสมาชิก': m.memberId || m.id,
+            'ชื่อ-สกุล': m.name || '',
+            'เขต': m.zone || '',
+            'ชุมชน': m.community || '',
+            'วันที่สมัคร': m.joinDate || '',
+            'อัปเดตล่าสุด': m.lastUpdate ? new Date(m.lastUpdate).toLocaleDateString('th-TH') : '',
+            'เงินฝาก': parseFloat(m.deposit || 0),
+            'ขายขยะสะสม': parseFloat(m.trashIncome || 0),
+            'ขายขยะใน 6 เดือน': parseFloat(m.trash6Months || 0),
+            'ถอนเงิน': parseFloat(m.withdraw || 0),
+            'หักฌาปนกิจ': parseFloat(m.deduction || 0),
+            'ยอดเงินคงเหลือ': parseFloat(m.balance || 0),
+            'สถานะสมาชิก': stat.text,
+            'ผู้รับสิทธิ์ 1': m.ben1Name || '',
+            'สถานะ 1': m.ben1Status || '',
+            'ผู้รับสิทธิ์ 2': m.ben2Name || '',
+            'สถานะ 2': m.ben2Status || '',
+            'ผู้รับสิทธิ์ 3': m.ben3Name || '',
+            'สถานะ 3': m.ben3Status || ''
+        };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
