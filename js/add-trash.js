@@ -1,130 +1,125 @@
 import { db } from "./firebase-config.js";
-import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+import { collection, getDocs, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-const form = document.getElementById('trashForm');
-const communitySelect = document.getElementById('communitySelect');
-const recordDate = document.getElementById('recordDate');
-const saveBtn = document.getElementById('saveBtn');
-const editIdInput = document.getElementById('editId');
-const cancelEditBtn = document.getElementById('cancelEdit');
-const tableBody = document.getElementById('trashRecordsTable');
+const loginOverlay = document.getElementById('loginOverlay');
+const trashContent = document.getElementById('trashContent');
+const memberSearch = document.getElementById('memberSearch');
+const searchResult = document.getElementById('searchResult');
+const trashFormSection = document.getElementById('trashFormSection');
 
-const inputs = {
-    glass: document.getElementById('valGlass'),
-    paper: document.getElementById('valPaper'),
-    plastic: document.getElementById('valPlastic'),
-    metal: document.getElementById('valMetal'),
-    other: document.getElementById('valOther')
-};
-
-// ข้อมูลชุมชน (Copy มาจาก report.js)
-const communityData = { /* ... รายชื่อชุมชนเหมือนเดิม ... */ };
-
-// เริ่มต้นหน้าจอ
-function init() {
-    recordDate.value = new Date().toISOString().split('T')[0];
-    populateCommunities();
-    loadRecords();
-}
-
-function populateCommunities() {
-    // ... เหมือนโค้ดเดิม ...
-}
-
-// คำนวณน้ำหนักรวม
-function calculateTotal() {
-    let total = 0;
-    Object.values(inputs).forEach(input => total += parseFloat(input.value || 0));
-    document.getElementById('totalDisplay').innerText = total.toFixed(2);
-}
-Object.values(inputs).forEach(input => input.addEventListener('input', calculateTotal));
-
-// ดึงข้อมูลมาแสดงในตาราง
-async function loadRecords() {
-    tableBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-400">กำลังโหลด...</td></tr>';
-    const q = query(collection(db, "trash_records"), orderBy("date", "desc"), limit(50));
-    const snap = await getDocs(q);
-    
-    let html = '';
-    snap.forEach(docSnap => {
-        const d = docSnap.data();
-        const id = docSnap.id;
-        html += `
-            <tr class="hover:bg-slate-50">
-                <td class="p-4 font-mono">${d.date}</td>
-                <td class="p-4 font-bold">${d.community}</td>
-                <td class="p-4 text-right">${(d.glass || 0).toFixed(2)}</td>
-                <td class="p-4 text-right">${(d.paper || 0).toFixed(2)}</td>
-                <td class="p-4 text-right">${(d.plastic || 0).toFixed(2)}</td>
-                <td class="p-4 text-right font-bold text-green-600">${(d.total || 0).toFixed(2)}</td>
-                <td class="p-4 text-center">
-                    <button onclick="editItem('${id}', ${JSON.stringify(d).replace(/"/g, '&quot;')})" class="text-blue-500 hover:underline mr-2">แก้ไข</button>
-                    <button onclick="deleteItem('${id}')" class="text-red-500 hover:underline">ลบ</button>
-                </td>
-            </tr>
-        `;
-    });
-    tableBody.innerHTML = html || '<tr><td colspan="7" class="p-4 text-center">ไม่มีข้อมูล</td></tr>';
-}
-
-// ฟังก์ชัน แก้ไข (ผูกกับ Window เพื่อให้เรียกจาก HTML ได้)
-window.editItem = (id, data) => {
-    editIdInput.value = id;
-    recordDate.value = data.date;
-    communitySelect.value = data.community;
-    inputs.glass.value = data.glass;
-    inputs.paper.value = data.paper;
-    inputs.plastic.value = data.plastic;
-    inputs.metal.value = data.metal;
-    inputs.other.value = data.other;
-    
-    calculateTotal();
-    saveBtn.innerHTML = '🔄 อัปเดตข้อมูล';
-    cancelEditBtn.classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-
-// ฟังก์ชัน ลบ
-window.deleteItem = async (id) => {
-    if (confirm('ยืนยันการลบข้อมูลชุดนี้?')) {
-        await deleteDoc(doc(db, "trash_records", id));
-        loadRecords();
+// ----------------------------------------------------
+// 1. ระบบรักษาความปลอดภัย (Password Protection)
+// ----------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+    if (sessionStorage.getItem('trashAuth') === 'true') {
+        showContent();
     }
-};
+});
 
-cancelEditBtn.onclick = () => {
-    form.reset();
-    editIdInput.value = '';
-    saveBtn.innerHTML = '💾 บันทึกข้อมูล';
-    cancelEditBtn.classList.add('hidden');
-    calculateTotal();
-};
-
-form.onsubmit = async (e) => {
-    e.preventDefault();
-    const id = editIdInput.value;
-    const data = {
-        date: recordDate.value,
-        community: communitySelect.value,
-        glass: parseFloat(inputs.glass.value || 0),
-        paper: parseFloat(inputs.paper.value || 0),
-        plastic: parseFloat(inputs.plastic.value || 0),
-        metal: parseFloat(inputs.metal.value || 0),
-        other: parseFloat(inputs.other.value || 0),
-        total: parseFloat(document.getElementById('totalDisplay').innerText),
-        lastUpdate: serverTimestamp()
-    };
-
-    if (id) {
-        await updateDoc(doc(db, "trash_records", id), data);
-        alert('อัปเดตสำเร็จ!');
+window.checkTrashPassword = () => {
+    const pwd = document.getElementById('trashPassword').value;
+    if (pwd === '987654321') {
+        sessionStorage.setItem('trashAuth', 'true');
+        showContent();
     } else {
-        await addDoc(collection(db, "trash_records"), data);
-        alert('บันทึกสำเร็จ!');
+        document.getElementById('loginError').classList.remove('hidden');
     }
-    
-    cancelEditBtn.onclick(); // ล้างฟอร์ม
-    loadRecords(); // โหลดตารางใหม่
 };
 
-init();
+function showContent() {
+    loginOverlay.classList.add('hidden');
+    trashContent.classList.remove('hidden');
+    loadMemberList(); // โหลดรายชื่อไว้สำหรับค้นหา
+}
+
+window.logoutTrash = () => {
+    sessionStorage.removeItem('trashAuth');
+    location.reload();
+};
+
+// ----------------------------------------------------
+// 2. ระบบค้นหาสมาชิก
+// ----------------------------------------------------
+let members = [];
+
+async function loadMemberList() {
+    const snap = await getDocs(collection(db, "members"));
+    members = [];
+    snap.forEach(d => members.push({ id: d.id, ...d.data() }));
+}
+
+memberSearch.addEventListener('input', (e) => {
+    const term = e.target.value.trim().toLowerCase();
+    if (term.length < 2) {
+        searchResult.classList.add('hidden');
+        trashFormSection.classList.add('hidden');
+        return;
+    }
+
+    const found = members.find(m => 
+        (m.name && m.name.toLowerCase().includes(term)) || 
+        (m.memberId && m.memberId.toString().includes(term))
+    );
+
+    if (found) {
+        searchResult.innerHTML = `
+            <div class="p-4 bg-green-50 rounded-2xl border border-green-200">
+                <p class="text-[10px] font-bold text-green-500 uppercase">พบข้อมูลสมาชิก</p>
+                <h4 class="text-lg font-bold text-gray-800">${found.name}</h4>
+                <p class="text-xs text-gray-500">รหัส: ${found.memberId} | ชุมชน: ${found.community || '-'}</p>
+            </div>
+        `;
+        searchResult.classList.remove('hidden');
+        trashFormSection.classList.remove('hidden');
+        document.getElementById('selectedMemberId').value = found.id;
+    } else {
+        searchResult.innerHTML = `<p class="text-center text-sm text-red-500 py-2">ไม่พบสมาชิกชื่อนี้</p>`;
+        searchResult.classList.remove('hidden');
+        trashFormSection.classList.add('hidden');
+    }
+});
+
+// ----------------------------------------------------
+// 3. ระบบบันทึกข้อมูลลง Firebase
+// ----------------------------------------------------
+document.getElementById('trashEntryForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const docId = document.getElementById('selectedMemberId').value;
+    const price = parseFloat(document.getElementById('price').value) || 0;
+    const btn = document.getElementById('btnSubmitTrash');
+    const btnText = document.getElementById('btnText');
+
+    if (!docId || price <= 0) return alert('ข้อมูลไม่ถูกต้อง');
+
+    try {
+        btn.disabled = true;
+        btnText.innerText = "กำลังบันทึก...";
+
+        const memberRef = doc(db, "members", docId);
+        
+        // อัปเดตยอดเงินสะสมอัตโนมัติ
+        await updateDoc(memberRef, {
+            trashIncome: increment(price),   // ขยะสะสมรวมเพิ่มขึ้น
+            balance: increment(price),       // ยอดคงเหลือเพิ่มขึ้น
+            trash6Months: increment(price),  // ประวัติขยะ 6 เดือนเพิ่มขึ้น
+            lastUpdate: new Date().toISOString() // อัปเดตเวลาล่าสุด (เพื่อให้สถานะเป็นสีเขียว)
+        });
+
+        alert('บันทึกสำเร็จ! ยอดเงินถูกโอนเข้าบัญชีสมาชิกแล้ว');
+        
+        // ล้างฟอร์ม
+        document.getElementById('trashEntryForm').reset();
+        memberSearch.value = '';
+        searchResult.classList.add('hidden');
+        trashFormSection.classList.add('hidden');
+        loadMemberList(); // รีโหลดข้อมูลล่าสุด
+
+    } catch (error) {
+        console.error(error);
+        alert('เกิดข้อผิดพลาด: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btnText.innerText = "ยืนยันบันทึกยอดเงินขยะ";
+    }
+});
