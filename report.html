@@ -3,131 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>รายงานสรุปการขายขยะ</title>
+    <title>Dashboard รายงานสรุปภาพรวม</title>
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Chakra Petch', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Chakra Petch', sans-serif; background-color: #f1f5f9; }
     </style>
 </head>
-<body class="bg-slate-50 p-4 md:p-8">
+<body class="p-4 md:p-8">
 
-    <div class="max-w-7xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100">
-        <header class="flex justify-between items-center mb-6 border-b pb-4">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-gray-800">รายงานสรุปการขายขยะ</h1>
-                <p class="text-sm text-gray-500 mt-1">วิเคราะห์ข้อมูลตามชุมชน เดือน และปี</p>
+                <h1 class="text-3xl font-bold text-slate-800">📊 ระบบ Dashboard รายงาน</h1>
+                <p class="text-slate-500">สรุปข้อมูลสมาชิกและสถิติการคัดแยกขยะ</p>
             </div>
-            <a href="admin.html" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-900 transition shadow-md">กลับหน้าจัดการ</a>
+            <div class="flex gap-2">
+                <a href="add-trash.html" class="px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition shadow-sm text-sm">♻️ บันทึกขยะใหม่</a>
+                <a href="admin.html" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300 transition text-sm">กลับหน้าแอดมิน</a>
+            </div>
         </header>
 
-        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 shadow-sm">
-            <div>
-                <label class="block text-sm font-bold text-gray-700 mb-1">ปี</label>
-                <select id="filterYear" class="w-full p-2 border border-gray-300 rounded-lg bg-white shadow-sm font-medium focus:ring-2 focus:ring-blue-500">
-                    <option value="all">-- ทุกปี --</option>
-                    <option value="2024">2567 (2024)</option>
-                    <option value="2025">2568 (2025)</option>
-                    <option value="2026">2569 (2026)</option>
-                </select>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500">
+                <p class="text-sm font-bold text-slate-400 uppercase">สมาชิกทั้งหมด</p>
+                <h2 id="dashTotalMembers" class="text-3xl font-bold text-slate-800">0</h2>
             </div>
-            <div>
-                <label class="block text-sm font-bold text-gray-700 mb-1">เดือน</label>
-                <select id="filterMonth" class="w-full p-2 border border-gray-300 rounded-lg bg-white shadow-sm font-medium focus:ring-2 focus:ring-blue-500">
-                    <option value="all">-- ทุกเดือน --</option>
-                    <option value="01">มกราคม</option> <option value="02">กุมภาพันธ์</option>
-                    <option value="03">มีนาคม</option> <option value="04">เมษายน</option>
-                    <option value="05">พฤษภาคม</option> <option value="06">มิถุนายน</option>
-                    <option value="07">กรกฎาคม</option> <option value="08">สิงหาคม</option>
-                    <option value="09">กันยายน</option> <option value="10">ตุลาคม</option>
-                    <option value="11">พฤศจิกายน</option> <option value="12">ธันวาคม</option>
-                </select>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-emerald-500">
+                <p class="text-sm font-bold text-slate-400 uppercase">เงินกองทุนสะสม</p>
+                <h2 id="dashTotalBalance" class="text-3xl font-bold text-emerald-600">฿0</h2>
             </div>
-            <div class="md:col-span-2">
-                <label class="block text-sm font-bold text-gray-700 mb-1">ชุมชน</label>
-                <select id="filterCommunity" class="w-full p-2 border border-gray-300 rounded-lg bg-white shadow-sm font-medium focus:ring-2 focus:ring-blue-500">
-                    <option value="all">-- รวมทุกชุมชน --</option>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-amber-500">
+                <p class="text-sm font-bold text-slate-400 uppercase">ยอดขายขยะรวม</p>
+                <h2 id="dashTotalTrash" class="text-3xl font-bold text-amber-600">฿0</h2>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-purple-500">
+                <p class="text-sm font-bold text-slate-400 uppercase">ผ่านเกณฑ์สิทธิ์</p>
+                <h2 id="dashActiveMembers" class="text-3xl font-bold text-purple-600">0</h2>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span>♻️ สัดส่วนประเภทขยะ</span>
+                </h3>
+                <div class="h-[300px]">
+                    <canvas id="trashTypeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-800">🏠 ยอดขยะสะสมรายชุมชน (Top 10)</h3>
+                    <select id="zoneFilter" class="text-sm border rounded-md p-1 outline-none">
+                        <option value="all">ทุกโซน</option>
+                        <option value="1">โซน 1</option>
+                        <option value="2">โซน 2</option>
                     </select>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div class="bg-gradient-to-br from-indigo-500 to-blue-600 text-white p-5 rounded-xl shadow-md text-center flex flex-col justify-center">
-                <p class="text-sm opacity-90 mb-1">ยอดขายขยะรวม (บาท)</p>
-                <h2 id="sumTotal" class="text-4xl font-bold">฿0.00</h2>
-            </div>
-            <div class="bg-white border border-gray-200 p-5 rounded-xl shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-bold text-gray-500">แก้ว</p>
-                    <h3 id="sumGlass" class="text-2xl font-bold text-gray-800">0.00</h3>
                 </div>
-                <div class="text-right">
-                    <p class="text-sm font-bold text-gray-500">กระดาษ</p>
-                    <h3 id="sumPaper" class="text-2xl font-bold text-gray-800">0.00</h3>
-                </div>
-            </div>
-            <div class="bg-white border border-gray-200 p-5 rounded-xl shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-bold text-gray-500">พลาสติก</p>
-                    <h3 id="sumPlastic" class="text-2xl font-bold text-gray-800">0.00</h3>
-                </div>
-                <div class="text-right">
-                    <p class="text-sm font-bold text-gray-500">โลหะ & อื่นๆ</p>
-                    <h3 id="sumMetalOther" class="text-2xl font-bold text-gray-800">0.00</h3>
+                <div class="h-[300px]">
+                    <canvas id="communityBarChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col mb-8">
-            <h3 class="text-lg font-bold text-gray-800 p-4 border-b bg-indigo-50">📋 สรุปยอดแยกตามรายชุมชน (แสดงทุกชุมชนในระบบ)</h3>
-            <div class="overflow-x-auto max-h-[400px]">
-                <table class="w-full text-left border-collapse whitespace-nowrap">
-                    <thead class="bg-slate-800 text-white text-sm sticky top-0 z-10">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-6 border-b border-slate-50 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">📄 ประวัติการบันทึกขยะล่าสุด</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 text-slate-400 text-[11px] uppercase font-bold">
                         <tr>
-                            <th class="p-3 font-semibold">ชื่อชุมชน</th>
-                            <th class="p-3 font-semibold text-right">แก้ว</th>
-                            <th class="p-3 font-semibold text-right">กระดาษ</th>
-                            <th class="p-3 font-semibold text-right">พลาสติก</th>
-                            <th class="p-3 font-semibold text-right">โลหะ</th>
-                            <th class="p-3 font-semibold text-right">อื่นๆ</th>
-                            <th class="p-3 font-semibold text-right text-green-300">รวมรายรับ (บาท)</th>
+                            <th class="p-4 border-b">วันที่</th>
+                            <th class="p-4 border-b">ชุมชน</th>
+                            <th class="p-4 border-b text-right">แก้ว</th>
+                            <th class="p-4 border-b text-right">กระดาษ</th>
+                            <th class="p-4 border-b text-right">พลาสติก</th>
+                            <th class="p-4 border-b text-right font-bold text-slate-700">รวม (บาท)</th>
                         </tr>
                     </thead>
-                    <tbody id="communitySummaryTable" class="divide-y divide-gray-200 text-sm bg-white">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
-                <h3 class="text-lg font-bold text-gray-800 mb-4 text-center">สัดส่วนประเภทขยะ</h3>
-                <div class="relative h-64 w-full">
-                    <canvas id="trashChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="lg:col-span-2 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-                <h3 class="text-lg font-bold text-gray-800 p-4 border-b bg-gray-50">ประวัติการนำขยะมาขาย (อิงตามตัวกรอง)</h3>
-                <div class="overflow-x-auto max-h-80">
-                    <table class="w-full text-left border-collapse whitespace-nowrap">
-                        <thead class="bg-slate-800 text-white text-sm sticky top-0">
-                            <tr>
-                                <th class="p-3 font-semibold">วันที่-เวลา</th>
-                                <th class="p-3 font-semibold">ชื่อสมาชิก</th>
-                                <th class="p-3 font-semibold">ชุมชน</th>
-                                <th class="p-3 font-semibold text-right">ยอดเงินรวม</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transactionTable" class="divide-y divide-gray-200 text-sm bg-white">
+                    <tbody id="dashTrashTable" class="text-sm divide-y divide-slate-50">
                         </tbody>
-                    </table>
-                </div>
+                </table>
             </div>
         </div>
     </div>
 
-    <script type="module" src="js/report.js"></script>
+    <script type="module" src="./js/report.js"></script>
 </body>
 </html>
