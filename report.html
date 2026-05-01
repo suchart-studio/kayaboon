@@ -16,98 +16,91 @@
 </head>
 <body class="p-4 md:p-8">
 
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-[100rem] mx-auto">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-slate-800">📊 Dashboard รายงานสรุป</h1>
-                <p class="text-slate-500">สถิติสมาชิกและปริมาณการคัดแยกขยะ (หน่วย: กิโลกรัม)</p>
+                <h1 class="text-3xl font-bold text-slate-800">Dashboard รายงานสรุป</h1>
+                <p class="text-sm text-slate-500 mt-1">กองทุนฌาปนกิจเปลี่ยนขยะเป็นบุญ</p>
             </div>
             <div class="flex gap-2">
-                <a href="add-trash.html" class="px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition shadow-sm text-sm">♻️ บันทึกขยะ/จัดการข้อมูล</a>
-                <a href="admin.html" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300 transition text-sm">กลับหน้าแอดมิน</a>
+                <a href="index.html" class="px-4 py-2.5 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition shadow-sm text-sm">หน้าแรก</a>
+                <a href="admin.html" class="px-4 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-sm text-sm">ไปหน้า Admin</a>
+                <a href="add-trash.html" class="px-4 py-2.5 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition shadow-sm text-sm">บันทึกขยะ</a>
             </div>
         </header>
 
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-6 flex flex-wrap gap-4 items-center">
-            <span class="font-bold text-slate-700 mr-2">🔍 ตัวกรอง:</span>
-            <select id="filterYear" class="p-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm outline-none focus:border-blue-500 font-medium cursor-pointer">
-                <option value="all">-- ทุกปี --</option>
-            </select>
-            <select id="filterMonth" class="p-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm outline-none focus:border-blue-500 font-medium cursor-pointer">
-                <option value="all">-- ทุกเดือน --</option>
-            </select>
-            <select id="filterCommunity" class="p-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm outline-none focus:border-blue-500 font-medium cursor-pointer">
-                <option value="all">-- ทุกชุมชน --</option>
-            </select>
-            <button id="resetFilterBtn" class="px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg font-bold transition">ล้างค่า</button>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 rounded-xl shadow-sm text-center flex flex-col justify-center">
+                <p class="text-xs opacity-90 mb-1 font-medium">ยอดเงินกองทุนรวม</p>
+                <h2 id="reportTotalBalance" class="text-xl md:text-2xl font-bold tracking-wider">฿0.00</h2>
+            </div>
+            
+            <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center flex flex-col justify-center">
+                <p class="text-xs text-slate-500 mb-1 font-bold">สมาชิกทั้งหมด</p>
+                <h2 id="reportTotalMembers" class="text-xl md:text-2xl font-bold text-slate-800">0 <span class="text-xs font-normal text-slate-500">คน</span></h2>
+            </div>
+            
+            <div class="bg-green-50 border border-green-200 p-4 rounded-xl shadow-sm text-center flex flex-col justify-center">
+                <p class="text-xs text-green-600 mb-1 font-bold">🟢 ยอดเยี่ยม / ปกติ</p>
+                <h2 id="reportActive" class="text-xl md:text-2xl font-bold text-green-600">0</h2>
+            </div>
+            
+            <div class="bg-orange-50 border border-orange-200 p-4 rounded-xl shadow-sm text-center flex flex-col justify-center">
+                <p class="text-xs text-orange-600 mb-1 font-bold">🟠 ยุ่งล่ะสิ (เงิน < 300)</p>
+                <h2 id="reportWarning" class="text-xl md:text-2xl font-bold text-orange-600">0</h2>
+            </div>
+            
+            <div class="bg-red-50 border border-red-200 p-4 rounded-xl shadow-sm text-center flex flex-col justify-center">
+                <p class="text-xs text-red-600 mb-1 font-bold">🔴 แย่แล้ว (เงินติดลบ)</p>
+                <h2 id="reportBad" class="text-xl md:text-2xl font-bold text-red-600">0</h2>
+            </div>
+
+            <div class="bg-slate-100 border border-slate-300 p-4 rounded-xl shadow-sm text-center flex flex-col justify-center">
+                <p class="text-xs text-slate-600 mb-1 font-bold">⚫ สิ้นสภาพ (> 6 เดือน)</p>
+                <h2 id="reportInactive" class="text-xl md:text-2xl font-bold text-slate-600">0</h2>
+            </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">สมาชิกทั้งหมด</p>
-                <h2 id="dashTotalMembers" class="text-3xl font-bold text-slate-800 mt-1">0</h2>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-emerald-500">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">เงินกองทุนสะสมรวม</p>
-                <h2 id="dashTotalBalance" class="text-3xl font-bold text-emerald-600 mt-1">฿0</h2>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-amber-500">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">การคัดแยกขยะสะสมรวม</p>
-                <h2 id="dashTotalTrash" class="text-3xl font-bold text-amber-600 mt-1">0.00 กก.</h2>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-purple-500">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">สมาชิกผ่านเกณฑ์</p>
-                <h2 id="dashActiveMembers" class="text-3xl font-bold text-purple-600 mt-1">0</h2>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-                <h3 class="font-bold text-slate-800 mb-4">♻️ สัดส่วนน้ำหนักขยะ (กก.)</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="font-bold text-slate-800 mb-4 border-b pb-2">📊 สัดส่วนประเภทขยะ (กก.)</h3>
                 <div class="chart-container">
                     <canvas id="trashTypeChart"></canvas>
                 </div>
             </div>
-
-            <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-                <h3 class="font-bold text-slate-800 mb-4">📈 ปริมาณขยะรายชุมชน Top 10 (กก.)</h3>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="font-bold text-slate-800 mb-4 border-b pb-2">🏆 10 อันดับชุมชน (น้ำหนักรวมสูงสุด)</h3>
                 <div class="chart-container">
                     <canvas id="communityBarChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">🏆 อันดับชุมชน (กิโลกรัม)</h3>
-                <div id="rankingList" class="space-y-2 max-h-[400px] overflow-y-auto pr-2 text-sm">
-                    </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-6 border-b border-slate-50 bg-slate-50/50">
+                <h3 class="font-bold text-slate-800">📄 ประวัติการคัดแยกขยะ (ล่าสุด 100 รายการ)</h3>
             </div>
-
-            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-6 border-b border-slate-50 bg-slate-50/50">
-                    <h3 class="font-bold text-slate-800">📄 ประวัติการคัดแยก (ตามตัวกรอง)</h3>
-                </div>
-                <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-white text-slate-400 text-xs uppercase font-bold sticky top-0 shadow-sm z-10">
-                            <tr>
-                                <th class="p-4 border-b">วันที่</th>
-                                <th class="p-4 border-b">ชุมชน</th>
-                                <th class="p-4 border-b text-right">แก้ว</th>
-                                <th class="p-4 border-b text-right">กระดาษ</th>
-                                <th class="p-4 border-b text-right">พลาสติก</th>
-                                <th class="p-4 border-b text-right font-bold text-blue-600">รวม (กก.)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dashTrashTable" class="text-sm divide-y divide-slate-50">
-                            </tbody>
-                    </table>
-                </div>
+            <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-800 text-white text-xs uppercase font-bold sticky top-0 shadow-sm z-10">
+                        <tr>
+                            <th class="p-4 border-b border-slate-700">วันที่</th>
+                            <th class="p-4 border-b border-slate-700">ชุมชน</th>
+                            <th class="p-4 border-b border-slate-700 text-right">แก้ว</th>
+                            <th class="p-4 border-b border-slate-700 text-right">กระดาษ</th>
+                            <th class="p-4 border-b border-slate-700 text-right">พลาสติก</th>
+                            <th class="p-4 border-b border-slate-700 text-right">โลหะ</th>
+                            <th class="p-4 border-b border-slate-700 text-right">อื่นๆ</th>
+                            <th class="p-4 border-b border-slate-700 text-right text-indigo-300">รวม (กก.)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashTrashTable" class="text-sm divide-y divide-slate-100">
+                        </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <script type="module" src="./js/report.js"></script>
+    <script type="module" src="js/report.js"></script>
 </body>
 </html>
