@@ -72,7 +72,7 @@ function populateCommunities(zoneValue, selectedCommunity = "") {
 }
 
 // ----------------------------------------------------
-// 3. ฟังก์ชันคำนวณสถานะสมาชิก
+// 3. ฟังก์ชันคำนวณสถานะสมาชิก (อัปเดต กรองคนที่ < 300)
 // ----------------------------------------------------
 function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
     const bal = parseFloat(balance || 0);
@@ -85,12 +85,13 @@ function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
     const monthsPassed = Math.abs(now - lastDate) / (1000 * 60 * 60 * 24 * 30.44); 
 
     if (bal >= 300) {
+        // มีเงิน 300 ขึ้นไป (กลุ่มยอดเยี่ยม / ปกติ)
         return monthsPassed <= 6 ? { text: "ยอดเยี่ยม", class: "bg-green-100 text-green-700 border-green-500" } : { text: "ยอดเยี่ยม (ขาดอัปเดต)", class: "bg-emerald-50 text-emerald-600 border-emerald-300" };
     } else { 
-        if (monthsPassed > 6) return { text: "สิ้นสภาพ", class: "bg-gray-200 text-gray-800 border-gray-500" };
-        if (monthsPassed > 4) return { text: "แย่แล้วล่ะ", class: "bg-red-100 text-red-700 border-red-500" };
-        if (monthsPassed > 2) return { text: "ยุ่งล่ะสิ", class: "bg-yellow-100 text-yellow-700 border-yellow-500" };
-        return { text: "ปกติ (กำลังสะสม)", class: "bg-sky-100 text-sky-700 border-sky-400" };
+        // มีเงินต่ำกว่า 300
+        if (monthsPassed > 6) return { text: "สิ้นสภาพ", class: "bg-gray-200 text-gray-800 border-gray-500" }; // ขาดส่ง 6 เดือน = สิ้นสภาพ
+        if (monthsPassed > 4) return { text: "แย่แล้วล่ะ", class: "bg-red-100 text-red-700 border-red-500" }; // ขาดส่ง 4-6 เดือน
+        return { text: "ยุ่งล่ะสิ", class: "bg-yellow-100 text-yellow-700 border-yellow-500" }; // ที่เหลือ (รวมถึงเพิ่งสมัครใหม่) ปัดเข้ากลุ่มนี้ทั้งหมด
     }
 }
 
@@ -302,7 +303,7 @@ window.deleteDeceased = async (id) => {
 };
 
 // ----------------------------------------------------
-// 5. โหลดข้อมูลตารางและคำนวณ Dashboard 🌟 (แยก 3 สถานะ)
+// 5. โหลดข้อมูลตารางและคำนวณ Dashboard
 // ----------------------------------------------------
 async function fetchAdminMembers() {
     tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-blue-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
@@ -324,32 +325,27 @@ async function fetchAdminMembers() {
 }
 
 function updateAdminDashboardSummary(members) {
-    let totalBalance = 0;
-    let activeCount = 0;    // ยอดเยี่ยม / ปกติ
-    let warningCount = 0;   // ยุ่งล่ะสิ / แย่แล้วล่ะ
-    let inactiveCount = 0;  // สิ้นสภาพ
-
+    let totalBalance = 0, activeCount = 0, warningCount = 0, inactiveCount = 0;
+    
     members.forEach(m => {
         const bal = parseFloat(m.balance || 0);
         totalBalance += bal;
         
-        // ใช้ฟังก์ชันประเมินสถานะตัวเดียวกันกับที่แสดงในตารางเป๊ะๆ
-        const stat = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.lastUpdate);
-        const text = stat.text;
-
-        if (text.includes("ยอดเยี่ยม") || text.includes("ปกติ") || text.includes("รับสิทธิ์")) {
+        // กรองการนับยอด Dashboard ให้ตรงกับตารางเป๊ะๆ
+        if (bal >= 300) {
             activeCount++;
-        } else if (text.includes("ยุ่งล่ะสิ") || text.includes("แย่แล้วล่ะ")) {
-            warningCount++;
-        } else if (text.includes("สิ้นสภาพ")) {
-            inactiveCount++;
+        } else {
+            const stat = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.lastUpdate);
+            if (stat.text.includes("สิ้นสภาพ")) {
+                inactiveCount++;
+            } else {
+                warningCount++; // ต่ำกว่า 300 และยังไม่สิ้นสภาพ ปัดเป็นยุ่งล่ะสิทั้งหมด
+            }
         }
     });
 
     document.getElementById('adminTotalBalance').innerText = '฿' + totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2});
     document.getElementById('adminTotalMembers').innerHTML = `${members.length.toLocaleString()} <span class="text-sm font-normal">คน</span>`;
-    
-    // อัปเดตตัวเลขแยก 3 กลุ่ม
     document.getElementById('adminActive').innerText = activeCount.toLocaleString();
     if(document.getElementById('adminWarning')) document.getElementById('adminWarning').innerText = warningCount.toLocaleString();
     document.getElementById('adminInactive').innerText = inactiveCount.toLocaleString();
@@ -407,7 +403,7 @@ window.nextAdminPage = () => { const totalPages = Math.ceil(filteredMembers.leng
 // 6. ระบบฟอร์มแก้ไขสมาชิก
 // ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
-const newDepositInput = document.getElementById('newDeposit');
+const newDepositInput = document.getElementById('newDeposit'); 
 const depositDateInput = document.getElementById('depositDate'); 
 const trashIncomeInput = document.getElementById('trashIncome'); 
 const withdrawInput = document.getElementById('withdraw');
