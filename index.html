@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เปลี่ยนขยะเป็นบุญ</title>
     
-    <!-- เพิ่ม PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#16a34a">
     <link rel="apple-touch-icon" href="icons/icon-192x192.png">
@@ -19,102 +18,64 @@
 </head>
 <body class="p-4 md:py-8 max-w-md mx-auto min-h-screen flex flex-col relative">
 
-    <header class="text-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-        <img src="logo.png" alt="โลโก้กองทุน" class="w-24 h-24 mx-auto mb-3 object-contain">
-        
-        <h1 class="text-xl font-bold text-green-700">เปลี่ยนขยะเป็นบุญ</h1>
-        <p class="text-sm text-gray-500">เทศบาลนครขอนแก่น</p>
+    <header class="text-center mb-6 bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
+        <div class="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3 text-4xl shadow-inner border border-green-100">♻️</div>
+        <h1 class="text-2xl font-bold text-green-700 leading-tight">กองทุนฌาปนกิจ<br>เปลี่ยนขยะเป็นบุญ</h1>
+        <p class="text-sm text-gray-500 mt-1">เทศบาลนครขอนแก่น</p>
+        <div class="mt-4 flex justify-center gap-2">
+            <a href="add-trash.html" class="px-4 py-2 bg-green-50 text-green-700 font-bold rounded-lg border border-green-200 text-xs hover:bg-green-100">บันทึกขยะ</a>
+            <a href="report.html" class="px-4 py-2 bg-blue-50 text-blue-700 font-bold rounded-lg border border-blue-200 text-xs hover:bg-blue-100">ดูรายงาน</a>
+            <a href="admin.html" class="px-4 py-2 bg-gray-50 text-gray-700 font-bold rounded-lg border border-gray-200 text-xs hover:bg-gray-100">ผู้ดูแล</a>
+        </div>
     </header>
 
-    <div class="grid grid-cols-2 gap-3 mb-6">
-        <div class="col-span-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 rounded-2xl shadow-md text-center">
-            <p class="text-sm opacity-90 mb-1">ยอดเงินกองทุนรวม (บาท)</p>
-            <h2 id="summaryTotalBalance" class="text-3xl font-bold tracking-wider">฿0.00</h2>
-        </div>
-        <div class="bg-white border border-gray-100 p-4 rounded-2xl shadow-sm text-center">
-            <p class="text-xs text-gray-500 mb-1">สมาชิกทั้งหมด</p>
-            <h2 id="summaryTotalMembers" class="text-2xl font-bold text-gray-800">0</h2>
-        </div>
-        <div class="bg-white border border-gray-100 p-4 rounded-2xl shadow-sm text-center">
-            <p class="text-xs text-gray-500 mb-1">สถานะ: ผ่าน / ไม่ผ่าน</p>
-            <h2 class="text-xl font-bold text-gray-800"><span id="summaryActive" class="text-green-600">0</span> <span class="text-gray-400 font-medium text-sm">/</span> <span id="summaryInactive" class="text-red-500">0</span></h2>
-        </div>
-    </div>
-
-    <div class="mb-4 sticky top-2 z-10">
-        <input type="text" id="searchInput" placeholder="🔍 ค้นหาชื่อ, รหัส หรือ ชุมชน..." class="w-full p-3 rounded-xl border border-gray-200 shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
-    </div>
-
-    <div id="memberList" class="space-y-3 pb-4">
-        <div class="text-center text-gray-500 py-10 animate-pulse">กำลังโหลดข้อมูล...</div>
-    </div>
-
-    <div id="userPaginationControls" class="flex justify-between items-center mb-10 mt-2 bg-white p-3 rounded-xl shadow-sm border border-gray-100 hidden">
-        <button onclick="prevUserPage()" class="px-4 py-2 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg font-bold text-sm shadow-sm active:bg-gray-200">⬅️</button>
-        <span id="userPageInfo" class="text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-md">1 / 1</span>
-        <button onclick="nextUserPage()" class="px-4 py-2 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg font-bold text-sm shadow-sm active:bg-gray-200">➡️</button>
-    </div>
-
-    <!-- ส่วน Popup แจ้งเตือนติดตั้งแอป PWA -->
-    <div id="installPrompt" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl">
-            <div class="bg-green-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
-                <span class="text-3xl">📱</span>
+    <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 mb-6">
+        <h2 class="text-sm font-bold text-gray-800 mb-3 border-b pb-2 flex items-center"><span class="mr-2">📊</span> ภาพรวมกองทุน</h2>
+        
+        <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="bg-blue-50 p-3 rounded-2xl border border-blue-100 text-center flex flex-col justify-center shadow-sm">
+                <p class="text-[10px] text-blue-600 font-bold uppercase mb-1">ยอดเงินกองทุนรวม</p>
+                <h3 id="summaryTotalBalance" class="text-lg font-bold text-blue-700 tracking-tight">฿0.00</h3>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">ติดตั้งแอปพลิเคชัน</h3>
-            <p class="text-sm text-gray-500 mb-6">เพิ่ม "เปลี่ยนขยะเป็นบุญ" ลงในหน้าจอโทรศัพท์ของคุณ เพื่อการเข้าถึงที่สะดวกรวดเร็วในครั้งต่อไป</p>
-            <div class="flex space-x-3">
-                <button id="closeInstallBtn" class="flex-1 py-3 rounded-xl border-2 border-gray-100 text-gray-600 font-bold hover:bg-gray-50 transition active:scale-95">ไว้คราวหลัง</button>
-                <button id="installBtn" class="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition shadow-lg shadow-green-200 active:scale-95">ติดตั้งเลย</button>
+            <div class="bg-gray-50 p-3 rounded-2xl border border-gray-200 text-center flex flex-col justify-center shadow-sm">
+                <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">สมาชิกทั้งหมด</p>
+                <h3 id="summaryTotalMembers" class="text-lg font-bold text-gray-700 tracking-tight">0</h3>
             </div>
         </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <div class="bg-green-50 p-3 rounded-2xl border border-green-200 text-center flex flex-col justify-center shadow-sm">
+                <p class="text-[10px] text-green-700 font-bold uppercase mb-1">🟢 ยอดเยี่ยม/ปกติ</p>
+                <h3 id="summaryActive" class="text-lg font-bold text-green-700">0</h3>
+            </div>
+            <div class="bg-orange-50 p-3 rounded-2xl border border-orange-200 text-center flex flex-col justify-center shadow-sm">
+                <p class="text-[10px] text-orange-700 font-bold uppercase mb-1">🟠 ยุ่งล่ะสิ</p>
+                <h3 id="summaryWarning" class="text-lg font-bold text-orange-700">0</h3>
+            </div>
+            <div class="bg-red-50 p-3 rounded-2xl border border-red-200 text-center flex flex-col justify-center shadow-sm">
+                <p class="text-[10px] text-red-700 font-bold uppercase mb-1">🔴 แย่แล้ว</p>
+                <h3 id="summaryBad" class="text-lg font-bold text-red-700">0</h3>
+            </div>
+            <div class="bg-slate-100 p-3 rounded-2xl border border-slate-300 text-center flex flex-col justify-center shadow-sm">
+                <p class="text-[10px] text-slate-700 font-bold uppercase mb-1">⚫ สิ้นสภาพ</p>
+                <h3 id="summaryInactive" class="text-lg font-bold text-slate-700">0</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="relative mb-6 z-10">
+        <input type="text" id="searchInput" class="w-full p-4 pl-12 bg-white border-2 border-green-100 focus:border-green-500 rounded-2xl shadow-sm outline-none transition-all font-bold text-gray-700 text-lg" placeholder="ค้นหาชื่อ, รหัส, ชุมชน...">
+        <span class="absolute left-4 top-4 text-2xl">🔍</span>
+    </div>
+
+    <div id="memberList" class="flex-1 pb-10"></div>
+
+    <div id="userPaginationControls" class="flex justify-between items-center mt-2 mb-8 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hidden">
+        <button onclick="prevUserPage()" class="px-4 py-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700 rounded-xl font-bold transition text-sm">⬅️ ก่อนหน้า</button>
+        <span id="userPageInfo" class="text-sm font-bold text-green-700 bg-green-50 px-4 py-2 rounded-xl border border-green-100">1 / 1</span>
+        <button onclick="nextUserPage()" class="px-4 py-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700 rounded-xl font-bold transition text-sm">ถัดไป ➡️</button>
     </div>
 
     <script type="module" src="js/app.js"></script>
-
-    <!-- สคริปต์จัดการ PWA และ Popup ติดตั้ง -->
-    <script>
-        // 1. ลงทะเบียน Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Reg Error:', err));
-            });
-        }
-
-        // 2. จัดการหน้าต่างแจ้งเตือนติดตั้งแอป
-        let deferredPrompt;
-        const installPrompt = document.getElementById('installPrompt');
-        const installBtn = document.getElementById('installBtn');
-        const closeInstallBtn = document.getElementById('closeInstallBtn');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // ป้องกันไม่ให้เบราว์เซอร์โชว์แถบติดตั้งแบบ default
-            e.preventDefault();
-            // เก็บ event ไว้เพื่อเรียกใช้เมื่อผู้ใช้กดปุ่มของเรา
-            deferredPrompt = e;
-            
-            // เช็คว่าผู้ใช้เคยกดปิดไปแล้วหรือไม่
-            if (!localStorage.getItem('pwaPromptDismissed')) {
-                installPrompt.classList.remove('hidden');
-            }
-        });
-
-        installBtn.addEventListener('click', async () => {
-            installPrompt.classList.add('hidden');
-            if (deferredPrompt) {
-                // แสดงหน้าต่างติดตั้งของระบบ
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                console.log(`User response: ${outcome}`);
-                deferredPrompt = null;
-            }
-        });
-
-        closeInstallBtn.addEventListener('click', () => {
-            installPrompt.classList.add('hidden');
-            // จำไว้ในเครื่องว่าผู้ใช้กดปิด จะได้ไม่เด้งกวนใจอีก
-            localStorage.setItem('pwaPromptDismissed', 'true');
-        });
-    </script>
 </body>
 </html>
