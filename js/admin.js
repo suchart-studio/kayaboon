@@ -302,7 +302,7 @@ window.deleteDeceased = async (id) => {
 };
 
 // ----------------------------------------------------
-// 5. โหลดข้อมูลตารางและคำนวณ Dashboard
+// 5. โหลดข้อมูลตารางและคำนวณ Dashboard 🌟 (แยก 3 สถานะ)
 // ----------------------------------------------------
 async function fetchAdminMembers() {
     tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-blue-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
@@ -324,15 +324,34 @@ async function fetchAdminMembers() {
 }
 
 function updateAdminDashboardSummary(members) {
-    let totalBalance = 0, activeCount = 0, inactiveCount = 0;
+    let totalBalance = 0;
+    let activeCount = 0;    // ยอดเยี่ยม / ปกติ
+    let warningCount = 0;   // ยุ่งล่ะสิ / แย่แล้วล่ะ
+    let inactiveCount = 0;  // สิ้นสภาพ
+
     members.forEach(m => {
         const bal = parseFloat(m.balance || 0);
         totalBalance += bal;
-        if (bal >= 300) activeCount++; else inactiveCount++;
+        
+        // ใช้ฟังก์ชันประเมินสถานะตัวเดียวกันกับที่แสดงในตารางเป๊ะๆ
+        const stat = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.lastUpdate);
+        const text = stat.text;
+
+        if (text.includes("ยอดเยี่ยม") || text.includes("ปกติ") || text.includes("รับสิทธิ์")) {
+            activeCount++;
+        } else if (text.includes("ยุ่งล่ะสิ") || text.includes("แย่แล้วล่ะ")) {
+            warningCount++;
+        } else if (text.includes("สิ้นสภาพ")) {
+            inactiveCount++;
+        }
     });
+
     document.getElementById('adminTotalBalance').innerText = '฿' + totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2});
-    document.getElementById('adminTotalMembers').innerHTML = `${members.length.toLocaleString()} <span class="text-base font-normal">คน</span>`;
+    document.getElementById('adminTotalMembers').innerHTML = `${members.length.toLocaleString()} <span class="text-sm font-normal">คน</span>`;
+    
+    // อัปเดตตัวเลขแยก 3 กลุ่ม
     document.getElementById('adminActive').innerText = activeCount.toLocaleString();
+    if(document.getElementById('adminWarning')) document.getElementById('adminWarning').innerText = warningCount.toLocaleString();
     document.getElementById('adminInactive').innerText = inactiveCount.toLocaleString();
 }
 
@@ -385,10 +404,10 @@ window.prevAdminPage = () => { if (currentPage > 1) { currentPage--; displayAdmi
 window.nextAdminPage = () => { const totalPages = Math.ceil(filteredMembers.length / rowsPerPage); if (currentPage < totalPages) { currentPage++; displayAdminTable(); } };
 
 // ----------------------------------------------------
-// 6. 🌟 ระบบฟอร์มแก้ไขสมาชิก (คำนวณยอด 2 ช่อง)
+// 6. ระบบฟอร์มแก้ไขสมาชิก
 // ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
-const newDepositInput = document.getElementById('newDeposit'); // เพิ่มช่องฝากใหม่
+const newDepositInput = document.getElementById('newDeposit');
 const depositDateInput = document.getElementById('depositDate'); 
 const trashIncomeInput = document.getElementById('trashIncome'); 
 const withdrawInput = document.getElementById('withdraw');
@@ -398,12 +417,11 @@ const statusInput = document.getElementById('memberStatus');
 
 function calculateBalance() {
     const d = parseFloat(depositInput.value) || 0;
-    const nd = parseFloat(newDepositInput.value) || 0; // ยอดฝากใหม่
+    const nd = parseFloat(newDepositInput.value) || 0; 
     const tAccum = parseFloat(trashIncomeInput.value) || 0;
     const w = parseFloat(withdrawInput.value) || 0;
     const ded = parseFloat(deductionInput.value) || 0;
     
-    // เงินคงเหลือ = (ฝากเดิม + ฝากใหม่ + ขยะสะสม) - ถอน - หัก
     const currentBalance = (d + nd + tAccum) - w - ded;
     balanceInput.value = currentBalance.toFixed(2); 
 
@@ -456,8 +474,8 @@ window.openModal = (mode, id = null) => {
             document.getElementById('joinDate').value = member.joinDate || '';
             
             document.getElementById('deposit').value = member.deposit || 0;
-            newDepositInput.value = ''; // ว่างไว้เสมอเผื่อจะกรอกยอดเพิ่มใหม่
-            depositDateInput.value = member.depositDate || ''; // โหลดวันที่ฝากมาแสดง
+            newDepositInput.value = ''; 
+            depositDateInput.value = member.depositDate || ''; 
             
             document.getElementById('trashIncome').value = member.trashIncome || 0;
             document.getElementById('withdraw').value = member.withdraw || 0;
@@ -490,7 +508,6 @@ memberForm.addEventListener('submit', async (e) => {
     const docId = document.getElementById('docId').value;
     const mId = document.getElementById('memberId').value;
     
-    // คำนวณยอดเงินฝากรวม (ฝากเดิม + ฝากใหม่)
     const d = parseFloat(document.getElementById('deposit').value) || 0;
     const nd = parseFloat(document.getElementById('newDeposit').value) || 0;
     const finalDeposit = d + nd;
@@ -504,8 +521,8 @@ memberForm.addEventListener('submit', async (e) => {
         zone: document.getElementById('memberZone').value,
         community: document.getElementById('memberCommunity').value,
         joinDate: document.getElementById('joinDate').value,
-        deposit: finalDeposit, // บันทึกยอดที่บวกกันเรียบร้อยแล้ว
-        depositDate: depositDateInput.value || '', // เซฟวันที่ฝาก
+        deposit: finalDeposit, 
+        depositDate: depositDateInput.value || '', 
         trashIncome: parseFloat(document.getElementById('trashIncome').value) || 0, 
         withdraw: parseFloat(document.getElementById('withdraw').value) || 0,
         deduction: parseFloat(document.getElementById('deduction').value) || 0,
@@ -572,9 +589,7 @@ async function importExcelToFirebase(data) {
         const mId = String(row['เลขสมาชิก'] || row['รหัสสมาชิก'] || (Date.now() + count));
 
         let depDate = '';
-        if (row['วันที่ฝากล่าสุด']) {
-            depDate = row['วันที่ฝากล่าสุด'];
-        }
+        if (row['วันที่ฝากล่าสุด']) { depDate = row['วันที่ฝากล่าสุด']; }
 
         batch.set(doc(db, "members", mId), {
             memberId: mId, name: name, zone: String(row['เขต'] || ''), community: String(row['ชุมชน'] || row['ชื่อชุมชน'] || ''),
