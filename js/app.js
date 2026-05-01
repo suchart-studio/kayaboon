@@ -16,7 +16,6 @@ function getMemberStatus(balance, ben1, ben2, ben3, ben4, ben5, ben6, lastUpdate
     const bal = parseFloat(balance || 0);
     const claimedCount = [ben1, ben2, ben3, ben4, ben5, ben6].filter(s => s === 'รับแล้ว' || s === 'รับสิทธิ์แล้ว').length;
     
-    // ถ้ารับสิทธิ์ครบ 6 คน
     if (claimedCount >= 6) {
         return { text: "รับสิทธิ์ครบแล้ว", class: "bg-blue-100 text-blue-700 border-blue-400" };
     }
@@ -24,45 +23,56 @@ function getMemberStatus(balance, ben1, ben2, ben3, ben4, ben5, ben6, lastUpdate
     const dateToUse = lastUpdate || new Date().toISOString();
     const lastDate = new Date(dateToUse);
     const now = new Date();
-    const diffTime = Math.abs(now - lastDate);
-    const monthsPassed = diffTime / (1000 * 60 * 60 * 24 * 30.44); 
+    const monthsPassed = Math.abs(now - lastDate) / (1000 * 60 * 60 * 24 * 30.44); 
 
     if (bal >= 300) {
-        if (monthsPassed <= 6) {
-            return { text: "ยอดเยี่ยม", class: "bg-green-100 text-green-700 border-green-500" };
-        } else {
-            return { text: "ยอดเยี่ยม (ขาดอัปเดต)", class: "bg-emerald-50 text-emerald-600 border-emerald-300" };
-        }
+        return monthsPassed <= 6 ? { text: "ยอดเยี่ยม", class: "bg-green-100 text-green-700 border-green-500" } : { text: "ยอดเยี่ยม (ขาดอัปเดต)", class: "bg-emerald-50 text-emerald-600 border-emerald-300" };
     } else { 
-        if (monthsPassed > 6) {
-            return { text: "สิ้นสภาพ", class: "bg-gray-200 text-gray-800 border-gray-500" };
-        } else if (bal < 0) {
-            return { text: "แย่แล้ว", class: "bg-red-100 text-red-700 border-red-500" };
-        } else {
-            return { text: "ยุ่งล่ะสิ", class: "bg-orange-100 text-orange-700 border-orange-500" };
-        }
+        if (monthsPassed > 6) return { text: "สิ้นสภาพ", class: "bg-gray-200 text-gray-800 border-gray-500" };
+        if (bal < 0) return { text: "แย่แล้ว", class: "bg-red-100 text-red-700 border-red-500" };
+        return { text: "ยุ่งล่ะสิ", class: "bg-orange-100 text-orange-700 border-orange-500" };
     }
 }
 
 // ----------------------------------------------------
-// คำนวณสรุปยอดด้านบนสุดของหน้า
+// 🌟 คำนวณสรุปยอดด้านบนสุดของหน้า (แยก 4 สถานะชัดเจน)
 // ----------------------------------------------------
 function calculateSummary(members) {
     let totalBalance = 0;
-    let activeCount = 0;
-    let inactiveCount = 0;
+    let activeCount = 0;    // ยอดเยี่ยม / ปกติ
+    let warningCount = 0;   // ยุ่งล่ะสิ
+    let badCount = 0;       // แย่แล้ว
+    let inactiveCount = 0;  // สิ้นสภาพ
 
     members.forEach(m => {
         const bal = parseFloat(m.balance || 0);
         totalBalance += bal;
-        if (bal >= 300) activeCount++;
-        else inactiveCount++;
+        
+        const stat = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.ben4Status, m.ben5Status, m.ben6Status, m.lastUpdate);
+        const text = stat.text;
+
+        if (text.includes("ยอดเยี่ยม") || text.includes("ปกติ") || text.includes("รับสิทธิ์")) {
+            activeCount++;
+        } else if (text.includes("ยุ่งล่ะสิ")) {
+            warningCount++;
+        } else if (text.includes("แย่แล้ว")) {
+            badCount++;
+        } else if (text.includes("สิ้นสภาพ")) {
+            inactiveCount++;
+        }
     });
 
-    document.getElementById('summaryTotalBalance').innerText = '฿' + totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('summaryTotalMembers').innerText = members.length.toLocaleString();
-    document.getElementById('summaryActive').innerText = activeCount.toLocaleString();
-    document.getElementById('summaryInactive').innerText = inactiveCount.toLocaleString();
+    // นำตัวเลขไปแสดงใน HTML
+    const elTotalBal = document.getElementById('summaryTotalBalance');
+    if (elTotalBal) {
+        elTotalBal.innerText = '฿' + totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('summaryTotalMembers').innerText = members.length.toLocaleString();
+        
+        document.getElementById('summaryActive').innerText = activeCount.toLocaleString();
+        if (document.getElementById('summaryWarning')) document.getElementById('summaryWarning').innerText = warningCount.toLocaleString();
+        if (document.getElementById('summaryBad')) document.getElementById('summaryBad').innerText = badCount.toLocaleString();
+        if (document.getElementById('summaryInactive')) document.getElementById('summaryInactive').innerText = inactiveCount.toLocaleString();
+    }
 }
 
 // ----------------------------------------------------
@@ -98,7 +108,7 @@ function showSearchPrompt() {
 }
 
 // ----------------------------------------------------
-// 🌟 ฟังก์ชันแสดงผลการ์ดสมาชิก
+// ฟังก์ชันแสดงผลการ์ดสมาชิก
 // ----------------------------------------------------
 function displayMembers() {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -146,7 +156,6 @@ function displayMembers() {
             }
         }
         if (recCount === 0) recHtml = '<p class="text-center text-sm text-gray-400 italic">ไม่มีข้อมูลผู้รับเงิน</p>';
-
 
         htmlString += `
             <div class="bg-white p-5 md:p-6 rounded-3xl shadow-md border border-gray-100 mb-5 transition active:scale-[0.98]">
