@@ -112,21 +112,73 @@ function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
 }
 
 // ----------------------------------------------------
-// 4. 🔥 ระบบหักเงินฌาปนกิจแบบ Batch (รองรับสมาชิกหลักพัน)
+// 4.1 ระบบค้นหาชื่อผู้เสียชีวิตอัตโนมัติ (Auto-complete)
+// ----------------------------------------------------
+const deceasedNameInput = document.getElementById('deceasedName');
+const deceasedCommunityInput = document.getElementById('deceasedCommunity');
+const deceasedSearchResult = document.getElementById('deceasedSearchResult');
+
+deceasedNameInput.addEventListener('input', function() {
+    const term = this.value.trim().toLowerCase();
+    deceasedSearchResult.innerHTML = '';
+    
+    if (term.length < 2) {
+        deceasedSearchResult.classList.add('hidden');
+        deceasedCommunityInput.value = '';
+        return;
+    }
+
+    // กรองหาจากชื่อสมาชิกที่มีอยู่ (ดึง 10 คนแรกที่ตรงกัน)
+    const matches = allMembers.filter(m => m.name && m.name.toLowerCase().includes(term)).slice(0, 10);
+
+    if (matches.length > 0) {
+        matches.forEach(m => {
+            const li = document.createElement('li');
+            li.className = 'p-3 hover:bg-red-50 cursor-pointer border-b border-gray-100 last:border-0 transition-colors';
+            const commText = m.community ? m.community : 'ไม่ระบุชุมชน';
+            
+            li.innerHTML = `
+                <div class="font-bold text-gray-800">${m.name}</div>
+                <div class="text-[11px] text-gray-500">รหัส: ${m.memberId || m.id} | ชุมชน: ${commText}</div>
+            `;
+            
+            // เมื่อคลิกที่รายชื่อ จะเติมชื่อและชุมชนให้อัตโนมัติ
+            li.onclick = () => {
+                deceasedNameInput.value = m.name;
+                deceasedCommunityInput.value = commText;
+                deceasedSearchResult.classList.add('hidden');
+            };
+            deceasedSearchResult.appendChild(li);
+        });
+        deceasedSearchResult.classList.remove('hidden');
+    } else {
+        deceasedSearchResult.innerHTML = '<li class="p-3 text-sm text-center text-gray-500">ไม่พบรายชื่อสมาชิก</li>';
+        deceasedSearchResult.classList.remove('hidden');
+    }
+});
+
+// ซ่อน Dropdown เมื่อคลิกที่อื่น
+document.addEventListener('click', function(e) {
+    if (!deceasedNameInput.contains(e.target) && !deceasedSearchResult.contains(e.target)) {
+        deceasedSearchResult.classList.add('hidden');
+    }
+});
+
+// ----------------------------------------------------
+// 4.2 🔥 ระบบหักเงินฌาปนกิจแบบ Batch (รองรับสมาชิกหลักพัน)
 // ----------------------------------------------------
 window.processDeathDeduction = async () => {
     const deceasedName = document.getElementById('deceasedName').value.trim();
     const deceasedComm = document.getElementById('deceasedCommunity').value.trim();
 
     if (!deceasedName || !deceasedComm) {
-        alert('กรุณากรอกชื่อผู้เสียชีวิตและชุมชน');
+        alert('กรุณาพิมพ์และเลือกชื่อผู้เสียชีวิตจากรายชื่อ');
         return;
     }
 
-    const confirmMsg = `ยืนยันบันทึกการเสียชีวิตของ คุณ${deceasedName}\nและหักเงินสมาชิกทุกคนคนละ 20 บาท?`;
+    const confirmMsg = `ยืนยันบันทึกการเสียชีวิตของ คุณ${deceasedName}\nชุมชน: ${deceasedComm}\nและหักเงินสมาชิกทุกคนคนละ 20 บาท?`;
     if (!confirm(confirmMsg)) return;
 
-    // UI elements สำหรับแจ้งเตือนสถานะ
     const btn = document.getElementById('btnDeduction');
     const btnText = document.getElementById('btnDeductionText');
     const progressDiv = document.getElementById('deductionProgress');
@@ -140,7 +192,6 @@ window.processDeathDeduction = async () => {
         progressDiv.classList.remove('hidden');
         statusText.innerText = "กำลังอ่านข้อมูลสมาชิกทั้งหมด...";
 
-        // ดึงข้อมูลสมาชิกทั้งหมด
         const querySnapshot = await getDocs(collection(db, "members"));
         const total = querySnapshot.size;
         let processed = 0;
@@ -153,17 +204,15 @@ window.processDeathDeduction = async () => {
             const currentDed = parseFloat(data.deduction || 0);
             const currentBal = parseFloat(data.balance || 0);
 
-            // อัปเดตเงินหัก และ เงินคงเหลือ
             batch.update(docSnap.ref, {
                 deduction: currentDed + 20,
                 balance: currentBal - 20,
-                lastUpdate: currentTime // รีเซ็ตเวลา ให้ทุกคนมีสถานะล่าสุด
+                lastUpdate: currentTime 
             });
 
             countInBatch++;
             processed++;
 
-            // ส่งข้อมูลทุกๆ 400 คน (Firebase อัปเดตได้สูงสุด 500 ต่อครั้ง)
             if (countInBatch >= 400) {
                 statusText.innerText = `กำลังบันทึกข้อมูล (${processed}/${total})...`;
                 await batch.commit();
@@ -172,12 +221,11 @@ window.processDeathDeduction = async () => {
                 progressBar.style.width = percent + '%';
                 percentText.innerText = percent + '%';
 
-                batch = writeBatch(db); // เริ่มชุดคำสั่งใหม่
+                batch = writeBatch(db); 
                 countInBatch = 0;
             }
         }
 
-        // ประมวลผลกลุ่มสุดท้ายที่เหลือ
         if (countInBatch > 0) {
             await batch.commit();
         }
@@ -190,7 +238,7 @@ window.processDeathDeduction = async () => {
         
         document.getElementById('deceasedName').value = '';
         document.getElementById('deceasedCommunity').value = '';
-        fetchAdminMembers(); // รีโหลดข้อมูลตาราง
+        fetchAdminMembers(); 
 
     } catch (error) {
         console.error("Error Deduction:", error);
@@ -241,7 +289,6 @@ function updateAdminDashboardSummary(members) {
     members.forEach(m => {
         const bal = parseFloat(m.balance || 0);
         totalBalance += bal;
-        // ถือว่าเงิน >= 300 คือผ่านเกณฑ์ภาพรวม
         if (bal >= 300) activeCount++;
         else inactiveCount++;
     });
@@ -326,7 +373,6 @@ function calculateBalance() {
     const ben2 = document.getElementById('ben2Status') ? document.getElementById('ben2Status').value : 'ยังไม่รับ';
     const ben3 = document.getElementById('ben3Status') ? document.getElementById('ben3Status').value : 'ยังไม่รับ';
     
-    // แสดงสถานะจำลองก่อนเซฟลงฐานข้อมูล
     const statusData = getMemberStatus(currentBalance, ben1, ben2, ben3, window._tempLastUpdate || new Date().toISOString());
 
     statusInput.value = statusData.text;
