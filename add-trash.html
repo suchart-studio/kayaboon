@@ -12,18 +12,34 @@
 </head>
 <body class="p-4 md:p-8">
 
-    <div class="max-w-5xl mx-auto">
+    <div id="loginOverlay" class="fixed inset-0 bg-slate-900 bg-opacity-95 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center border-t-4 border-green-600">
+            <h2 class="text-2xl font-bold text-gray-800 mb-1">เข้าสู่ระบบบันทึกขยะ</h2>
+            <p class="text-sm text-gray-500 mb-6">กรุณากรอกรหัสผ่านเพื่อเข้าใช้งาน</p>
+            <input type="password" id="trashPassword" class="w-full p-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-center mb-4 text-xl tracking-widest bg-gray-50" placeholder="••••••••">
+            <button onclick="checkTrashPassword()" class="w-full bg-green-600 text-white py-3.5 rounded-xl font-bold hover:bg-green-700 transition shadow-lg text-lg">เข้าสู่ระบบ</button>
+            <p id="loginError" class="text-red-500 text-sm mt-4 hidden bg-red-50 py-2 rounded-lg font-bold">❌ รหัสผ่านไม่ถูกต้อง</p>
+            <a href="index.html" class="inline-block mt-6 text-sm text-gray-400 hover:text-gray-600 underline">กลับไปหน้าหลัก</a>
+        </div>
+    </div>
+
+    <div id="trashContent" class="hidden max-w-5xl mx-auto">
         <div class="bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100 mb-8">
             <header class="flex justify-between items-center mb-6 border-b pb-4">
                 <div>
                     <h1 class="text-2xl md:text-3xl font-bold text-green-700">♻️ บันทึกการคัดแยกขยะ</h1>
                     <p class="text-sm text-gray-500 mt-1">หน่วยการบันทึก: กิโลกรัม (กก.)</p>
                 </div>
-                <a href="report.html" class="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition text-sm">ไปหน้า Dashboard</a>
+                <div class="flex gap-2">
+                    <a href="report.html" class="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition text-sm">ไปหน้า Dashboard</a>
+                    <button onclick="logoutTrash()" class="px-4 py-2 bg-red-100 text-red-600 font-bold rounded-lg hover:bg-red-200 transition text-sm">ออกจากระบบ</button>
+                </div>
             </header>
 
             <form id="trashForm" class="space-y-6">
-                <input type="hidden" id="editId"> <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl">
+                <input type="hidden" id="editId">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl">
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-1">วันที่บันทึก</label>
                         <input type="date" id="recordDate" class="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-green-500 outline-none" required>
