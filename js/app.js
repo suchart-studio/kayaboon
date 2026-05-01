@@ -10,13 +10,14 @@ let currentPage = 1;
 const itemsPerPage = 50;
 
 // ----------------------------------------------------
-// ฟังก์ชันคำนวณสถานะสมาชิกแบบ 4 ระดับ (Real-time)
+// ฟังก์ชันคำนวณสถานะสมาชิกแบบ 4 ระดับ (รองรับผู้รับสิทธิ์ 6 คน)
 // ----------------------------------------------------
-function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
+function getMemberStatus(balance, ben1, ben2, ben3, ben4, ben5, ben6, lastUpdate) {
     const bal = parseFloat(balance || 0);
-    const claimedCount = [ben1, ben2, ben3].filter(s => s === 'รับแล้ว' || s === 'รับสิทธิ์แล้ว').length;
+    const claimedCount = [ben1, ben2, ben3, ben4, ben5, ben6].filter(s => s === 'รับแล้ว' || s === 'รับสิทธิ์แล้ว').length;
     
-    if (claimedCount >= 3) {
+    // ถ้ารับสิทธิ์ครบ 6 คน
+    if (claimedCount >= 6) {
         return { text: "รับสิทธิ์ครบแล้ว", class: "bg-blue-100 text-blue-700 border-blue-400" };
     }
 
@@ -35,12 +36,10 @@ function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
     } else { 
         if (monthsPassed > 6) {
             return { text: "สิ้นสภาพ", class: "bg-gray-200 text-gray-800 border-gray-500" };
-        } else if (monthsPassed > 4) {
-            return { text: "แย่แล้วล่ะ", class: "bg-red-100 text-red-700 border-red-500" };
-        } else if (monthsPassed > 2) {
-            return { text: "ยุ่งล่ะสิ", class: "bg-yellow-100 text-yellow-700 border-yellow-500" };
+        } else if (bal < 0) {
+            return { text: "แย่แล้ว", class: "bg-red-100 text-red-700 border-red-500" };
         } else {
-            return { text: "ปกติ (กำลังสะสม)", class: "bg-sky-100 text-sky-700 border-sky-400" };
+            return { text: "ยุ่งล่ะสิ", class: "bg-orange-100 text-orange-700 border-orange-500" };
         }
     }
 }
@@ -99,7 +98,7 @@ function showSearchPrompt() {
 }
 
 // ----------------------------------------------------
-// 🌟 ฟังก์ชันแสดงผลการ์ดสมาชิก (ปรับตัวหนังสือใหญ่ขึ้น)
+// 🌟 ฟังก์ชันแสดงผลการ์ดสมาชิก
 // ----------------------------------------------------
 function displayMembers() {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -110,8 +109,44 @@ function displayMembers() {
     let htmlString = '';
     
     pagedMembers.forEach(m => {
-        const statusData = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.lastUpdate);
+        const statusData = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.ben4Status, m.ben5Status, m.ben6Status, m.lastUpdate);
         const getBenIcon = (status) => (status === 'รับแล้ว' || status === 'รับสิทธิ์แล้ว') ? 'bg-red-500' : 'bg-green-500';
+
+        // 🟢 สร้าง HTML ผู้รับสิทธิ์ (กรองเฉพาะคนที่มีชื่อ)
+        let benHtml = '';
+        let benCount = 0;
+        for (let i = 1; i <= 6; i++) {
+            const benName = m[`ben${i}Name`];
+            const benStatus = m[`ben${i}Status`];
+            if (benName && benName.trim() !== '') {
+                benCount++;
+                benHtml += `
+                    <div class="flex justify-between items-center text-sm md:text-base font-medium">
+                        <span class="text-gray-800">${benCount}. ${benName}</span>
+                        <span class="w-4 h-4 md:w-5 md:h-5 rounded-full border-2 border-white shadow-sm ${getBenIcon(benStatus)}"></span>
+                    </div>
+                `;
+            }
+        }
+        if (benCount === 0) benHtml = '<p class="text-center text-sm text-emerald-600/60 italic">ไม่มีข้อมูลผู้รับสิทธิ์</p>';
+
+        // 🔵 สร้าง HTML ผู้รับเงิน (กรองเฉพาะคนที่มีชื่อ)
+        let recHtml = '';
+        let recCount = 0;
+        for (let i = 1; i <= 6; i++) {
+            const recName = m[`rec${i}Name`];
+            if (recName && recName.trim() !== '') {
+                recCount++;
+                recHtml += `
+                    <p class="flex items-center text-gray-700">
+                        <span class="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 text-xs font-bold rounded-full mr-3 shadow-sm">${recCount}</span> 
+                        ${recName}
+                    </p>
+                `;
+            }
+        }
+        if (recCount === 0) recHtml = '<p class="text-center text-sm text-gray-400 italic">ไม่มีข้อมูลผู้รับเงิน</p>';
+
 
         htmlString += `
             <div class="bg-white p-5 md:p-6 rounded-3xl shadow-md border border-gray-100 mb-5 transition active:scale-[0.98]">
@@ -158,27 +193,14 @@ function displayMembers() {
                         <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
                             <p class="text-xs font-bold text-emerald-700 mb-3 uppercase tracking-wider text-center">สถานะการรับสิทธิ์</p>
                             <div class="space-y-3">
-                                <div class="flex justify-between items-center text-sm md:text-base font-medium">
-                                    <span class="text-gray-800">1. ${m.ben1Name || '-'}</span>
-                                    <span class="w-4 h-4 md:w-5 md:h-5 rounded-full border-2 border-white shadow-sm ${getBenIcon(m.ben1Status)}"></span>
-                                </div>
-                                <div class="flex justify-between items-center text-sm md:text-base font-medium">
-                                    <span class="text-gray-800">2. ${m.ben2Name || '-'}</span>
-                                    <span class="w-4 h-4 md:w-5 md:h-5 rounded-full border-2 border-white shadow-sm ${getBenIcon(m.ben2Status)}"></span>
-                                </div>
-                                <div class="flex justify-between items-center text-sm md:text-base font-medium">
-                                    <span class="text-gray-800">3. ${m.ben3Name || '-'}</span>
-                                    <span class="w-4 h-4 md:w-5 md:h-5 rounded-full border-2 border-white shadow-sm ${getBenIcon(m.ben3Status)}"></span>
-                                </div>
+                                ${benHtml}
                             </div>
                         </div>
                         
                         <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-inner">
                             <p class="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider text-center">ลำดับผู้ที่จะได้รับเงิน</p>
-                            <div class="text-sm md:text-base space-y-3 font-medium text-gray-700">
-                                <p class="flex items-center"><span class="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 text-xs font-bold rounded-full mr-3 shadow-sm">1</span> ${m.rec1Name || '-'}</p>
-                                <p class="flex items-center"><span class="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 text-xs font-bold rounded-full mr-3 shadow-sm">2</span> ${m.rec2Name || '-'}</p>
-                                <p class="flex items-center"><span class="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 text-xs font-bold rounded-full mr-3 shadow-sm">3</span> ${m.rec3Name || '-'}</p>
+                            <div class="text-sm md:text-base space-y-3 font-medium">
+                                ${recHtml}
                             </div>
                         </div>
                     </div>
