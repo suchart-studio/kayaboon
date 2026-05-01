@@ -22,7 +22,7 @@ if (sessionStorage.getItem('adminAuth') === 'true') {
     loginOverlay.classList.add('hidden');
     adminContent.classList.remove('hidden');
     fetchAdminMembers();
-    fetchDeceasedRecords(); // โหลดข้อมูลประวัติผู้เสียชีวิต
+    fetchDeceasedRecords(); 
 }
 
 window.checkPassword = () => {
@@ -95,7 +95,7 @@ function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
 }
 
 // ----------------------------------------------------
-// 4.1 ระบบค้นหาชื่อผู้เสียชีวิตอัตโนมัติ (Auto-complete)
+// 4.1 ระบบค้นหาชื่อผู้เสียชีวิตอัตโนมัติ 
 // ----------------------------------------------------
 const deceasedNameInput = document.getElementById('deceasedName');
 const deceasedCommunityInput = document.getElementById('deceasedCommunity');
@@ -207,7 +207,6 @@ window.processDeathDeduction = async () => {
 
         if (countInBatch > 0) { await batch.commit(); }
 
-        // 🟢 เพิ่มข้อมูลลงฐานข้อมูล deceased_records (ประวัติผู้เสียชีวิต)
         await addDoc(collection(db, "deceased_records"), {
             name: deceasedName,
             community: deceasedComm,
@@ -225,7 +224,7 @@ window.processDeathDeduction = async () => {
         document.getElementById('deceasedCommunity').value = '';
         
         fetchAdminMembers(); 
-        fetchDeceasedRecords(); // อัปเดตตารางประวัติผู้เสียชีวิตด้านล่าง
+        fetchDeceasedRecords();
 
     } catch (error) {
         console.error("Error Deduction:", error);
@@ -239,7 +238,7 @@ window.processDeathDeduction = async () => {
 };
 
 // ----------------------------------------------------
-// 4.3 🟢 ระบบดึงข้อมูล และ แก้ไข/ลบ ประวัติผู้เสียชีวิต
+// 4.3 ระบบดึงข้อมูล และ แก้ไข/ลบ ประวัติผู้เสียชีวิต
 // ----------------------------------------------------
 async function fetchDeceasedRecords() {
     const table = document.getElementById('deceasedTable');
@@ -271,7 +270,6 @@ async function fetchDeceasedRecords() {
     }
 }
 
-// เปิดหน้าต่างแก้ไขผู้ตาย
 window.openDeceasedEdit = (id, name, community) => {
     document.getElementById('editDeceasedId').value = id;
     document.getElementById('editDeceasedName').value = name;
@@ -279,7 +277,6 @@ window.openDeceasedEdit = (id, name, community) => {
     document.getElementById('deceasedModal').classList.remove('hidden');
 };
 
-// เซฟการแก้ไขประวัติ
 window.saveDeceasedEdit = async () => {
     const id = document.getElementById('editDeceasedId').value;
     const name = document.getElementById('editDeceasedName').value.trim();
@@ -295,7 +292,6 @@ window.saveDeceasedEdit = async () => {
     } catch(e) { alert('เกิดข้อผิดพลาด: ' + e.message); }
 };
 
-// ลบประวัติ
 window.deleteDeceased = async (id) => {
     if(confirm('ยืนยันการลบประวัตินี้? \n(หมายเหตุ: การลบนี้จะลบแค่ประวัติในตารางเท่านั้น จะไม่สามารถดึงเงินคืนให้สมาชิกอัตโนมัติได้)')) {
         try {
@@ -389,9 +385,10 @@ window.prevAdminPage = () => { if (currentPage > 1) { currentPage--; displayAdmi
 window.nextAdminPage = () => { const totalPages = Math.ceil(filteredMembers.length / rowsPerPage); if (currentPage < totalPages) { currentPage++; displayAdminTable(); } };
 
 // ----------------------------------------------------
-// 6. ระบบฟอร์มแก้ไขสมาชิก (Modal)
+// 6. 🌟 ระบบฟอร์มแก้ไขสมาชิก (Modal) - จัดการวันที่ฝากเงิน
 // ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
+const depositDateInput = document.getElementById('depositDate'); // ดึงฟิลด์วันที่ฝาก
 const trashIncomeInput = document.getElementById('trashIncome'); 
 const withdrawInput = document.getElementById('withdraw');
 const deductionInput = document.getElementById('deduction');
@@ -427,6 +424,7 @@ window.openModal = (mode, id = null) => {
         memberForm.reset();
         document.getElementById('memberId').readOnly = false;
         document.getElementById('docId').value = '';
+        depositDateInput.value = ''; // เคลียร์วันที่ฝากให้ว่าง
         populateCommunities(""); 
         
         ['ben1Name', 'ben2Name', 'ben3Name', 'rec1Name', 'rec2Name', 'rec3Name'].forEach(field => {
@@ -451,6 +449,7 @@ window.openModal = (mode, id = null) => {
             document.getElementById('joinDate').value = member.joinDate || '';
             
             document.getElementById('deposit').value = member.deposit || 0;
+            depositDateInput.value = member.depositDate || ''; // โหลดวันที่ฝากมาแสดง
             document.getElementById('trashIncome').value = member.trashIncome || 0;
             document.getElementById('withdraw').value = member.withdraw || 0;
             document.getElementById('deduction').value = member.deduction || 0;
@@ -492,6 +491,7 @@ memberForm.addEventListener('submit', async (e) => {
         community: document.getElementById('memberCommunity').value,
         joinDate: document.getElementById('joinDate').value,
         deposit: parseFloat(document.getElementById('deposit').value) || 0,
+        depositDate: depositDateInput.value || '', // เซฟวันที่ฝาก
         trashIncome: parseFloat(document.getElementById('trashIncome').value) || 0, 
         withdraw: parseFloat(document.getElementById('withdraw').value) || 0,
         deduction: parseFloat(document.getElementById('deduction').value) || 0,
@@ -557,9 +557,15 @@ async function importExcelToFirebase(data) {
         const t6m = parseFloat(row['ขายขยะใน 6 เดือน'] || row['ขยะ 6 เดือน'] || 0);
         const mId = String(row['เลขสมาชิก'] || row['รหัสสมาชิก'] || (Date.now() + count));
 
+        // รองรับวันที่ฝากจาก Excel ด้วย (ถ้ามีคอลัมน์ "วันที่ฝากล่าสุด")
+        let depDate = '';
+        if (row['วันที่ฝากล่าสุด']) {
+            depDate = row['วันที่ฝากล่าสุด'];
+        }
+
         batch.set(doc(db, "members", mId), {
             memberId: mId, name: name, zone: String(row['เขต'] || ''), community: String(row['ชุมชน'] || row['ชื่อชุมชน'] || ''),
-            joinDate: String(row['วันที่สมัคร'] || ''), deposit: d, trashIncome: t, withdraw: w, deduction: ded,
+            joinDate: String(row['วันที่สมัคร'] || ''), deposit: d, depositDate: String(depDate), trashIncome: t, withdraw: w, deduction: ded,
             balance: (d + t) - w - ded, trash6Months: t6m, ben1Status: 'ยังไม่รับ', ben2Status: 'ยังไม่รับ', ben3Status: 'ยังไม่รับ', lastUpdate: currentTime
         });
         count++;
@@ -579,7 +585,8 @@ window.exportToExcel = () => {
         return {
             'เลขสมาชิก': m.memberId || m.id, 'ชื่อ-สกุล': m.name || '', 'เขต': m.zone || '', 'ชุมชน': m.community || '',
             'วันที่สมัคร': m.joinDate || '', 'อัปเดตล่าสุด': m.lastUpdate ? new Date(m.lastUpdate).toLocaleDateString('th-TH') : '',
-            'เงินฝาก': parseFloat(m.deposit || 0), 'ขายขยะสะสม': parseFloat(m.trashIncome || 0), 'ขายขยะใน 6 เดือน': parseFloat(m.trash6Months || 0),
+            'เงินฝาก': parseFloat(m.deposit || 0), 'วันที่ฝากล่าสุด': m.depositDate ? new Date(m.depositDate).toLocaleDateString('th-TH') : '-',
+            'ขายขยะสะสม': parseFloat(m.trashIncome || 0), 'ขายขยะใน 6 เดือน': parseFloat(m.trash6Months || 0),
             'ถอนเงิน': parseFloat(m.withdraw || 0), 'หักฌาปนกิจ': parseFloat(m.deduction || 0), 'ยอดเงินคงเหลือ': parseFloat(m.balance || 0),
             'สถานะสมาชิก': stat.text, 'ผู้รับสิทธิ์ 1': m.ben1Name || '', 'สถานะ 1': m.ben1Status || '',
             'ผู้รับสิทธิ์ 2': m.ben2Name || '', 'สถานะ 2': m.ben2Status || '', 'ผู้รับสิทธิ์ 3': m.ben3Name || '', 'สถานะ 3': m.ben3Status || ''
