@@ -72,7 +72,7 @@ function populateCommunities(zoneValue, selectedCommunity = "") {
 }
 
 // ----------------------------------------------------
-// 3. ฟังก์ชันคำนวณสถานะสมาชิก (🌟 อัปเดตใหม่)
+// 3. ฟังก์ชันคำนวณสถานะสมาชิก
 // ----------------------------------------------------
 function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
     const bal = parseFloat(balance || 0);
@@ -87,13 +87,8 @@ function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
     if (bal >= 300) {
         return monthsPassed <= 6 ? { text: "ยอดเยี่ยม", class: "bg-green-100 text-green-700 border-green-500" } : { text: "ยอดเยี่ยม (ขาดอัปเดต)", class: "bg-emerald-50 text-emerald-600 border-emerald-300" };
     } else { 
-        // ถ้าขาดการติดต่อนานเกิน 6 เดือน ให้ตกไปอยู่ สิ้นสภาพ เสมอ
         if (monthsPassed > 6) return { text: "สิ้นสภาพ", class: "bg-gray-200 text-gray-800 border-gray-500" };
-        
-        // ถ้าเงินติดลบ
         if (bal < 0) return { text: "แย่แล้ว", class: "bg-red-100 text-red-700 border-red-500" };
-        
-        // ถ้าเงินน้อยกว่า 300 (แต่ >= 0)
         return { text: "ยุ่งล่ะสิ", class: "bg-orange-100 text-orange-700 border-orange-500" };
     }
 }
@@ -306,7 +301,7 @@ window.deleteDeceased = async (id) => {
 };
 
 // ----------------------------------------------------
-// 5. โหลดข้อมูลตารางและคำนวณ Dashboard
+// 5. 🌟 โหลดข้อมูลตารางและคำนวณ Dashboard (แยกเป็น 6 กล่อง 4 สถานะ)
 // ----------------------------------------------------
 async function fetchAdminMembers() {
     tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-blue-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
@@ -330,7 +325,8 @@ async function fetchAdminMembers() {
 function updateAdminDashboardSummary(members) {
     let totalBalance = 0;
     let activeCount = 0;    // ยอดเยี่ยม / ปกติ
-    let warningCount = 0;   // ยุ่งล่ะสิ / แย่แล้ว
+    let warningCount = 0;   // ยุ่งล่ะสิ
+    let badCount = 0;       // แย่แล้ว
     let inactiveCount = 0;  // สิ้นสภาพ
 
     members.forEach(m => {
@@ -342,18 +338,23 @@ function updateAdminDashboardSummary(members) {
 
         if (text.includes("ยอดเยี่ยม") || text.includes("ปกติ") || text.includes("รับสิทธิ์")) {
             activeCount++;
-        } else if (text.includes("ยุ่งล่ะสิ") || text.includes("แย่แล้ว")) {
+        } else if (text.includes("ยุ่งล่ะสิ")) {
             warningCount++;
+        } else if (text.includes("แย่แล้ว")) {
+            badCount++;
         } else if (text.includes("สิ้นสภาพ")) {
             inactiveCount++;
         }
     });
 
+    // นำตัวเลขไปแสดงในแต่ละกล่อง
     document.getElementById('adminTotalBalance').innerText = '฿' + totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2});
     document.getElementById('adminTotalMembers').innerHTML = `${members.length.toLocaleString()} <span class="text-sm font-normal">คน</span>`;
-    
     document.getElementById('adminActive').innerText = activeCount.toLocaleString();
-    if(document.getElementById('adminWarning')) document.getElementById('adminWarning').innerText = warningCount.toLocaleString();
+    
+    if (document.getElementById('adminWarning')) document.getElementById('adminWarning').innerText = warningCount.toLocaleString();
+    if (document.getElementById('adminBad')) document.getElementById('adminBad').innerText = badCount.toLocaleString();
+    
     document.getElementById('adminInactive').innerText = inactiveCount.toLocaleString();
 }
 
@@ -406,7 +407,7 @@ window.prevAdminPage = () => { if (currentPage > 1) { currentPage--; displayAdmi
 window.nextAdminPage = () => { const totalPages = Math.ceil(filteredMembers.length / rowsPerPage); if (currentPage < totalPages) { currentPage++; displayAdminTable(); } };
 
 // ----------------------------------------------------
-// 6. ระบบฟอร์มแก้ไขสมาชิก (คำนวณยอด 2 ช่อง)
+// 6. ระบบฟอร์มแก้ไขสมาชิก
 // ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
 const newDepositInput = document.getElementById('newDeposit');
