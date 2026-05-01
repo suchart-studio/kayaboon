@@ -74,7 +74,7 @@ async function loadMembers() {
         const querySnapshot = await getDocs(collection(db, "members"));
         
         if(querySnapshot.empty) {
-            memberListEl.innerHTML = '<div class="text-center text-red-500 bg-red-50 p-4 rounded-xl border border-red-100">ยังไม่มีข้อมูลในระบบ</div>';
+            memberListEl.innerHTML = '<div class="text-center text-red-500 bg-red-50 p-4 rounded-xl border border-red-100 text-lg">ยังไม่มีข้อมูลในระบบ</div>';
             return;
         }
 
@@ -85,21 +85,21 @@ async function loadMembers() {
         calculateSummary(allMembers);
         showSearchPrompt();
     } catch (error) {
-        memberListEl.innerHTML = `<div class='text-center text-red-500 bg-red-50 p-4 rounded-xl'>เกิดข้อผิดพลาด: ${error.message}</div>`;
+        memberListEl.innerHTML = `<div class='text-center text-red-500 bg-red-50 p-4 rounded-xl text-lg'>เกิดข้อผิดพลาด: ${error.message}</div>`;
     }
 }
 
 function showSearchPrompt() {
     memberListEl.innerHTML = `
-        <div class="text-center py-10 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            <div class="text-4xl mb-3">🔍</div>
-            <p class="text-gray-400 text-sm">พิมพ์ชื่อ เลขสมาชิก หรือชุมชนด้านบน<br>เพื่อค้นหาข้อมูลของคุณ</p>
+        <div class="text-center py-12 bg-white rounded-3xl border border-gray-100 shadow-sm">
+            <div class="text-5xl mb-4">🔍</div>
+            <p class="text-gray-500 text-base font-medium">พิมพ์ชื่อ เลขสมาชิก หรือชุมชน<br>เพื่อค้นหาข้อมูลของคุณ</p>
         </div>
     `;
 }
 
 // ----------------------------------------------------
-// แสดงผลการ์ดสมาชิก
+// 🌟 ฟังก์ชันแสดงผลการ์ดสมาชิก (ปรับตัวหนังสือใหญ่ขึ้น)
 // ----------------------------------------------------
 function displayMembers() {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -110,81 +110,81 @@ function displayMembers() {
     let htmlString = '';
     
     pagedMembers.forEach(m => {
-        // ประเมินสถานะ 4 สีแบบ Real-time
         const statusData = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.lastUpdate);
-        
-        // เช็คสีวงกลมสถานะรับสิทธิ์
         const getBenIcon = (status) => (status === 'รับแล้ว' || status === 'รับสิทธิ์แล้ว') ? 'bg-red-500' : 'bg-green-500';
 
         htmlString += `
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-4 transition active:scale-[0.98]">
-                <div class="flex justify-between items-start mb-3">
+            <div class="bg-white p-5 md:p-6 rounded-3xl shadow-md border border-gray-100 mb-5 transition active:scale-[0.98]">
+                
+                <div class="flex justify-between items-start mb-4 gap-2">
                     <div>
-                        <p class="text-[10px] text-gray-400 font-bold mb-0.5 uppercase tracking-tighter">รหัสสมาชิก: ${m.memberId || '-'}</p>
-                        <h3 class="text-lg font-bold text-slate-800">${m.name}</h3>
-                        <p class="text-xs text-blue-600 font-medium">${m.community || '-'} (เขต ${m.zone || '-'})</p>
+                        <p class="text-xs text-gray-400 font-bold mb-1 uppercase tracking-wider">รหัสสมาชิก: <span class="text-gray-600">${m.memberId || '-'}</span></p>
+                        <h3 class="text-2xl md:text-3xl font-bold text-slate-800 mb-1 leading-tight">${m.name}</h3>
+                        <p class="text-sm md:text-base text-blue-600 font-bold">${m.community || '-'} (เขต ${m.zone || '-'})</p>
                     </div>
-                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${statusData.class}">
+                    <span class="px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider border shadow-sm text-center ${statusData.class}">
                         ${statusData.text}
                     </span>
                 </div>
 
-                <div class="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl mb-3">
+                <div class="grid grid-cols-3 gap-2 bg-slate-50 p-4 rounded-2xl mb-4 border border-slate-100">
                     <div class="text-center border-r border-slate-200">
-                        <p class="text-[9px] text-slate-400 font-bold uppercase">เงินฝาก</p>
-                        <p class="text-xs font-bold text-slate-700">฿${(parseFloat(m.deposit) || 0).toLocaleString()}</p>
+                        <p class="text-[11px] text-slate-500 font-bold uppercase mb-1">เงินฝาก</p>
+                        <p class="text-base md:text-lg font-bold text-slate-700">฿${(parseFloat(m.deposit) || 0).toLocaleString()}</p>
                     </div>
                     <div class="text-center border-r border-slate-200">
-                        <p class="text-[9px] text-slate-400 font-bold uppercase">ขยะรวม</p>
-                        <p class="text-xs font-bold text-slate-700">฿${(parseFloat(m.trashIncome) || 0).toLocaleString()}</p>
+                        <p class="text-[11px] text-slate-500 font-bold uppercase mb-1">ขยะรวม</p>
+                        <p class="text-base md:text-lg font-bold text-slate-700">฿${(parseFloat(m.trashIncome) || 0).toLocaleString()}</p>
                     </div>
                     <div class="text-center">
-                        <p class="text-[9px] text-slate-400 font-bold uppercase">หัก</p>
-                        <p class="text-xs font-bold text-red-500">฿${(parseFloat(m.deduction) || 0).toLocaleString()}</p>
+                        <p class="text-[11px] text-slate-500 font-bold uppercase mb-1">หัก(ฌ)</p>
+                        <p class="text-base md:text-lg font-bold text-red-500">฿${(parseFloat(m.deduction) || 0).toLocaleString()}</p>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between bg-amber-50 border border-amber-100 p-2.5 rounded-lg mb-3">
-                    <p class="text-xs font-bold text-amber-700">♻️ ประวัติขายขยะ (6 เดือน)</p>
-                    <p class="text-sm font-bold text-amber-700">฿${(parseFloat(m.trash6Months) || 0).toLocaleString()}</p>
+                <div class="flex items-center justify-between bg-amber-50 border border-amber-200 p-3.5 rounded-xl mb-4 shadow-sm">
+                    <p class="text-sm font-bold text-amber-700">♻️ ขายขยะ (6 เดือน)</p>
+                    <p class="text-lg md:text-xl font-bold text-amber-700">฿${(parseFloat(m.trash6Months) || 0).toLocaleString()}</p>
                 </div>
 
-                <div class="p-3 bg-blue-50/50 rounded-xl flex justify-between items-center">
-                    <p class="text-xs font-bold text-gray-600">เงินคงเหลือสุทธิ</p>
-                    <p class="text-xl font-bold text-blue-600">฿${(parseFloat(m.balance) || 0).toLocaleString()}</p>
+                <div class="p-4 md:p-5 bg-blue-50/80 rounded-2xl flex justify-between items-center border border-blue-200 shadow-sm">
+                    <p class="text-base md:text-lg font-bold text-gray-700">เงินคงเหลือสุทธิ</p>
+                    <p class="text-3xl md:text-4xl font-bold text-blue-600 tracking-tight">฿${(parseFloat(m.balance) || 0).toLocaleString()}</p>
                 </div>
 
-                <div class="mt-4 pt-3 border-t border-gray-100">
+                <div class="mt-5 pt-4 border-t border-gray-100">
                     <div class="grid grid-cols-1 gap-4">
-                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                            <p class="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider text-center">สถานะผู้รับสิทธิ์</p>
-                            <div class="space-y-1.5">
-                                <div class="flex justify-between items-center text-xs">
-                                    <span class="text-gray-700">1. ${m.ben1Name || '-'}</span>
-                                    <span class="w-3.5 h-3.5 rounded-full border border-white shadow-sm ${getBenIcon(m.ben1Status)}"></span>
+                        
+                        <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
+                            <p class="text-xs font-bold text-emerald-700 mb-3 uppercase tracking-wider text-center">สถานะการรับสิทธิ์</p>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center text-sm md:text-base font-medium">
+                                    <span class="text-gray-800">1. ${m.ben1Name || '-'}</span>
+                                    <span class="w-4 h-4 md:w-5 md:h-5 rounded-full border-2 border-white shadow-sm ${getBenIcon(m.ben1Status)}"></span>
                                 </div>
-                                <div class="flex justify-between items-center text-xs">
-                                    <span class="text-gray-700">2. ${m.ben2Name || '-'}</span>
-                                    <span class="w-3.5 h-3.5 rounded-full border border-white shadow-sm ${getBenIcon(m.ben2Status)}"></span>
+                                <div class="flex justify-between items-center text-sm md:text-base font-medium">
+                                    <span class="text-gray-800">2. ${m.ben2Name || '-'}</span>
+                                    <span class="w-4 h-4 md:w-5 md:h-5 rounded-full border-2 border-white shadow-sm ${getBenIcon(m.ben2Status)}"></span>
                                 </div>
-                                <div class="flex justify-between items-center text-xs">
-                                    <span class="text-gray-700">3. ${m.ben3Name || '-'}</span>
-                                    <span class="w-3.5 h-3.5 rounded-full border border-white shadow-sm ${getBenIcon(m.ben3Status)}"></span>
+                                <div class="flex justify-between items-center text-sm md:text-base font-medium">
+                                    <span class="text-gray-800">3. ${m.ben3Name || '-'}</span>
+                                    <span class="w-4 h-4 md:w-5 md:h-5 rounded-full border-2 border-white shadow-sm ${getBenIcon(m.ben3Status)}"></span>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                            <p class="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wider text-center">ลำดับผู้ที่จะได้รับเงิน</p>
-                            <div class="text-xs space-y-1 text-gray-700">
-                                <p><span class="inline-block w-4 h-4 bg-blue-100 text-blue-600 text-[10px] font-bold rounded text-center mr-1">1</span> ${m.rec1Name || '-'}</p>
-                                <p><span class="inline-block w-4 h-4 bg-blue-100 text-blue-600 text-[10px] font-bold rounded text-center mr-1">2</span> ${m.rec2Name || '-'}</p>
-                                <p><span class="inline-block w-4 h-4 bg-blue-100 text-blue-600 text-[10px] font-bold rounded text-center mr-1">3</span> ${m.rec3Name || '-'}</p>
+                        <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-inner">
+                            <p class="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider text-center">ลำดับผู้ที่จะได้รับเงิน</p>
+                            <div class="text-sm md:text-base space-y-3 font-medium text-gray-700">
+                                <p class="flex items-center"><span class="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 text-xs font-bold rounded-full mr-3 shadow-sm">1</span> ${m.rec1Name || '-'}</p>
+                                <p class="flex items-center"><span class="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 text-xs font-bold rounded-full mr-3 shadow-sm">2</span> ${m.rec2Name || '-'}</p>
+                                <p class="flex items-center"><span class="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-600 text-xs font-bold rounded-full mr-3 shadow-sm">3</span> ${m.rec3Name || '-'}</p>
                             </div>
                         </div>
                     </div>
-                    <div class="mt-3 text-center">
-                        <p class="text-[10px] text-gray-400">อัปเดตข้อมูลล่าสุด: ${m.lastUpdate ? new Date(m.lastUpdate).toLocaleDateString('th-TH') : 'ไม่มีบันทึก'}</p>
+                    
+                    <div class="mt-5 text-center">
+                        <p class="text-xs font-medium text-gray-400">อัปเดตข้อมูลล่าสุด: ${m.lastUpdate ? new Date(m.lastUpdate).toLocaleDateString('th-TH') : 'ไม่มีบันทึก'}</p>
                     </div>
                 </div>
             </div>
@@ -209,7 +209,7 @@ window.prevUserPage = () => {
     if (currentPage > 1) {
         currentPage--;
         displayMembers();
-        window.scrollTo({ top: 150, behavior: 'smooth' });
+        window.scrollTo({ top: 200, behavior: 'smooth' });
     }
 };
 
@@ -218,7 +218,7 @@ window.nextUserPage = () => {
     if (currentPage < totalPages) {
         currentPage++;
         displayMembers();
-        window.scrollTo({ top: 150, behavior: 'smooth' });
+        window.scrollTo({ top: 200, behavior: 'smooth' });
     }
 };
 
@@ -242,7 +242,16 @@ searchInput.addEventListener('input', (e) => {
     );
     
     currentPage = 1;
-    displayMembers();
+    if(filteredMembers.length > 0){
+        displayMembers();
+    } else {
+        memberListEl.innerHTML = `
+            <div class="text-center py-10 bg-white rounded-3xl border border-gray-100 shadow-sm">
+                <p class="text-gray-400 text-base">ไม่พบข้อมูลสมาชิกที่ค้นหา</p>
+            </div>
+        `;
+        document.getElementById('userPaginationControls').classList.add('hidden');
+    }
 });
 
 // รันโหลดข้อมูลเมื่อเปิดหน้า
