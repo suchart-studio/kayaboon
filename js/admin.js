@@ -72,12 +72,12 @@ function populateCommunities(zoneValue, selectedCommunity = "") {
 }
 
 // ----------------------------------------------------
-// 3. ฟังก์ชันคำนวณสถานะสมาชิก
+// 3. ฟังก์ชันคำนวณสถานะสมาชิก (เพิ่มผู้รับสิทธิ์ 4, 5, 6)
 // ----------------------------------------------------
-function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
+function getMemberStatus(balance, ben1, ben2, ben3, ben4, ben5, ben6, lastUpdate) {
     const bal = parseFloat(balance || 0);
-    const claimedCount = [ben1, ben2, ben3].filter(s => s === 'รับแล้ว' || s === 'รับสิทธิ์แล้ว').length;
-    if (claimedCount >= 3) return { text: "รับสิทธิ์ครบแล้ว", class: "bg-blue-100 text-blue-700 border-blue-400" };
+    const claimedCount = [ben1, ben2, ben3, ben4, ben5, ben6].filter(s => s === 'รับแล้ว' || s === 'รับสิทธิ์แล้ว').length;
+    if (claimedCount >= 6) return { text: "รับสิทธิ์ครบแล้ว", class: "bg-blue-100 text-blue-700 border-blue-400" };
 
     const dateToUse = lastUpdate || new Date().toISOString();
     const lastDate = new Date(dateToUse);
@@ -291,7 +291,7 @@ function updateAdminDashboardSummary(members) {
     members.forEach(m => {
         const bal = parseFloat(m.balance || 0);
         totalBalance += bal;
-        const stat = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.lastUpdate);
+        const stat = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.ben4Status, m.ben5Status, m.ben6Status, m.lastUpdate);
         const text = stat.text;
         if (text.includes("ยอดเยี่ยม") || text.includes("ปกติ") || text.includes("รับสิทธิ์")) { activeCount++; } 
         else if (text.includes("ยุ่งล่ะสิ")) { warningCount++; } 
@@ -325,7 +325,7 @@ function displayAdminTable() {
 
     let htmlString = '';
     displayData.forEach(member => {
-        const statusObj = getMemberStatus(member.balance, member.ben1Status, member.ben2Status, member.ben3Status, member.lastUpdate);
+        const statusObj = getMemberStatus(member.balance, member.ben1Status, member.ben2Status, member.ben3Status, member.ben4Status, member.ben5Status, member.ben6Status, member.lastUpdate);
         const commText = member.community ? `${member.community}` : '-';
         htmlString += `
             <tr class="hover:bg-blue-50 transition-colors border-b border-gray-100">
@@ -378,7 +378,11 @@ function calculateBalance() {
     const ben1 = document.getElementById('ben1Status') ? document.getElementById('ben1Status').value : 'ยังไม่รับ';
     const ben2 = document.getElementById('ben2Status') ? document.getElementById('ben2Status').value : 'ยังไม่รับ';
     const ben3 = document.getElementById('ben3Status') ? document.getElementById('ben3Status').value : 'ยังไม่รับ';
-    const statusData = getMemberStatus(currentBalance, ben1, ben2, ben3, window._tempLastUpdate || new Date().toISOString());
+    const ben4 = document.getElementById('ben4Status') ? document.getElementById('ben4Status').value : 'ยังไม่รับ';
+    const ben5 = document.getElementById('ben5Status') ? document.getElementById('ben5Status').value : 'ยังไม่รับ';
+    const ben6 = document.getElementById('ben6Status') ? document.getElementById('ben6Status').value : 'ยังไม่รับ';
+
+    const statusData = getMemberStatus(currentBalance, ben1, ben2, ben3, ben4, ben5, ben6, window._tempLastUpdate || new Date().toISOString());
 
     statusInput.value = statusData.text;
     statusInput.className = `w-1/2 p-2 text-center border-2 rounded-lg font-bold ${statusData.class}`;
@@ -398,8 +402,10 @@ window.openModal = (mode, id = null) => {
         document.getElementById('docId').value = '';
         depositInput.value = 0; newDepositInput.value = ''; depositDateInput.value = ''; 
         populateCommunities(""); 
-        ['ben1Name', 'ben2Name', 'ben3Name', 'rec1Name', 'rec2Name', 'rec3Name'].forEach(field => { if(document.getElementById(field)) document.getElementById(field).value = ''; });
-        ['ben1Status', 'ben2Status', 'ben3Status'].forEach(field => { if(document.getElementById(field)) document.getElementById(field).value = 'ยังไม่รับ'; });
+        
+        ['ben1Name', 'ben2Name', 'ben3Name', 'ben4Name', 'ben5Name', 'ben6Name', 'rec1Name', 'rec2Name', 'rec3Name', 'rec4Name', 'rec5Name', 'rec6Name'].forEach(field => { if(document.getElementById(field)) document.getElementById(field).value = ''; });
+        ['ben1Status', 'ben2Status', 'ben3Status', 'ben4Status', 'ben5Status', 'ben6Status'].forEach(field => { if(document.getElementById(field)) document.getElementById(field).value = 'ยังไม่รับ'; });
+        
         window._tempLastUpdate = new Date().toISOString(); calculateBalance(); 
     } else if (mode === 'edit') {
         document.getElementById('modalTitle').innerText = 'แก้ไขข้อมูลสมาชิก';
@@ -426,10 +432,19 @@ window.openModal = (mode, id = null) => {
             if(document.getElementById('ben2Status')) document.getElementById('ben2Status').value = member.ben2Status || 'ยังไม่รับ';
             if(document.getElementById('ben3Name')) document.getElementById('ben3Name').value = member.ben3Name || '';
             if(document.getElementById('ben3Status')) document.getElementById('ben3Status').value = member.ben3Status || 'ยังไม่รับ';
+            if(document.getElementById('ben4Name')) document.getElementById('ben4Name').value = member.ben4Name || '';
+            if(document.getElementById('ben4Status')) document.getElementById('ben4Status').value = member.ben4Status || 'ยังไม่รับ';
+            if(document.getElementById('ben5Name')) document.getElementById('ben5Name').value = member.ben5Name || '';
+            if(document.getElementById('ben5Status')) document.getElementById('ben5Status').value = member.ben5Status || 'ยังไม่รับ';
+            if(document.getElementById('ben6Name')) document.getElementById('ben6Name').value = member.ben6Name || '';
+            if(document.getElementById('ben6Status')) document.getElementById('ben6Status').value = member.ben6Status || 'ยังไม่รับ';
             
             if(document.getElementById('rec1Name')) document.getElementById('rec1Name').value = member.rec1Name || '';
             if(document.getElementById('rec2Name')) document.getElementById('rec2Name').value = member.rec2Name || '';
             if(document.getElementById('rec3Name')) document.getElementById('rec3Name').value = member.rec3Name || '';
+            if(document.getElementById('rec4Name')) document.getElementById('rec4Name').value = member.rec4Name || '';
+            if(document.getElementById('rec5Name')) document.getElementById('rec5Name').value = member.rec5Name || '';
+            if(document.getElementById('rec6Name')) document.getElementById('rec6Name').value = member.rec6Name || '';
             
             window._tempLastUpdate = member.lastUpdate; 
             calculateBalance(); 
@@ -465,9 +480,15 @@ memberForm.addEventListener('submit', async (e) => {
         data.ben1Name = document.getElementById('ben1Name').value.trim(); data.ben1Status = document.getElementById('ben1Status').value;
         data.ben2Name = document.getElementById('ben2Name').value.trim(); data.ben2Status = document.getElementById('ben2Status').value;
         data.ben3Name = document.getElementById('ben3Name').value.trim(); data.ben3Status = document.getElementById('ben3Status').value;
+        data.ben4Name = document.getElementById('ben4Name').value.trim(); data.ben4Status = document.getElementById('ben4Status').value;
+        data.ben5Name = document.getElementById('ben5Name').value.trim(); data.ben5Status = document.getElementById('ben5Status').value;
+        data.ben6Name = document.getElementById('ben6Name').value.trim(); data.ben6Status = document.getElementById('ben6Status').value;
+        
         data.rec1Name = document.getElementById('rec1Name').value.trim(); data.rec2Name = document.getElementById('rec2Name').value.trim();
-        data.rec3Name = document.getElementById('rec3Name').value.trim();
-        data.status = getMemberStatus(data.balance, data.ben1Status, data.ben2Status, data.ben3Status, currentTime).text; 
+        data.rec3Name = document.getElementById('rec3Name').value.trim(); data.rec4Name = document.getElementById('rec4Name').value.trim();
+        data.rec5Name = document.getElementById('rec5Name').value.trim(); data.rec6Name = document.getElementById('rec6Name').value.trim();
+        
+        data.status = getMemberStatus(data.balance, data.ben1Status, data.ben2Status, data.ben3Status, data.ben4Status, data.ben5Status, data.ben6Status, currentTime).text; 
     }
 
     try {
@@ -478,25 +499,29 @@ memberForm.addEventListener('submit', async (e) => {
 });
 
 // ----------------------------------------------------
-// 7. 🌟 ระบบฟังก์ชันแก้ไขส่งออก Excel
+// 7. ระบบแก้ไขส่งออก Excel
 // ----------------------------------------------------
 window.exportToExcel = () => {
     if (allMembers.length === 0) return alert('ไม่มีข้อมูลสำหรับส่งออก');
     alert('กำลังเตรียมไฟล์ Excel กรุณารอสักครู่...');
     const exportData = filteredMembers.map(m => {
-        const stat = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.lastUpdate);
+        const stat = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.ben4Status, m.ben5Status, m.ben6Status, m.lastUpdate);
         return {
             'เลขสมาชิก': m.memberId || m.id, 'ชื่อ-สกุล': m.name || '', 'เขต': m.zone || '', 'ชุมชน': m.community || '',
             'วันที่สมัคร': m.joinDate || '', 'อัปเดตล่าสุด': m.lastUpdate ? new Date(m.lastUpdate).toLocaleDateString('th-TH') : '',
             'เงินฝาก': parseFloat(m.deposit || 0), 'วันที่ฝากล่าสุด': m.depositDate ? new Date(m.depositDate).toLocaleDateString('th-TH') : '-',
             'ขายขยะสะสม': parseFloat(m.trashIncome || 0), 'ขายขยะใน 6 เดือน': parseFloat(m.trash6Months || 0),
             'ถอนเงิน': parseFloat(m.withdraw || 0), 'หักฌาปนกิจ': parseFloat(m.deduction || 0), 'ยอดเงินคงเหลือ': parseFloat(m.balance || 0),
-            'สถานะสมาชิก': stat.text, 'ผู้รับสิทธิ์ 1': m.ben1Name || '', 'สถานะ 1': m.ben1Status || '',
-            'ผู้รับสิทธิ์ 2': m.ben2Name || '', 'สถานะ 2': m.ben2Status || '', 'ผู้รับสิทธิ์ 3': m.ben3Name || '', 'สถานะ 3': m.ben3Status || ''
+            'สถานะสมาชิก': stat.text, 
+            'ผู้รับสิทธิ์ 1': m.ben1Name || '', 'สถานะ 1': m.ben1Status || '',
+            'ผู้รับสิทธิ์ 2': m.ben2Name || '', 'สถานะ 2': m.ben2Status || '', 
+            'ผู้รับสิทธิ์ 3': m.ben3Name || '', 'สถานะ 3': m.ben3Status || '',
+            'ผู้รับสิทธิ์ 4': m.ben4Name || '', 'สถานะ 4': m.ben4Status || '',
+            'ผู้รับสิทธิ์ 5': m.ben5Name || '', 'สถานะ 5': m.ben5Status || '',
+            'ผู้รับสิทธิ์ 6': m.ben6Name || '', 'สถานะ 6': m.ben6Status || ''
         };
     });
     
-    // แก้ไขคำสั่งสร้างสมุดงาน (Workbook) ไม่ให้ Error 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "ข้อมูลสมาชิก");
@@ -537,7 +562,10 @@ async function importExcelToFirebase(data) {
         batch.set(doc(db, "members", mId), {
             memberId: mId, name: name, zone: String(row['เขต'] || ''), community: String(row['ชุมชน'] || row['ชื่อชุมชน'] || ''),
             joinDate: String(row['วันที่สมัคร'] || ''), deposit: d, depositDate: String(depDate), trashIncome: t, withdraw: w, deduction: ded,
-            balance: (d + t) - w - ded, trash6Months: t6m, ben1Status: 'ยังไม่รับ', ben2Status: 'ยังไม่รับ', ben3Status: 'ยังไม่รับ', lastUpdate: currentTime
+            balance: (d + t) - w - ded, trash6Months: t6m, 
+            ben1Status: 'ยังไม่รับ', ben2Status: 'ยังไม่รับ', ben3Status: 'ยังไม่รับ', 
+            ben4Status: 'ยังไม่รับ', ben5Status: 'ยังไม่รับ', ben6Status: 'ยังไม่รับ',
+            lastUpdate: currentTime
         });
         count++;
         if (count % 400 === 0) { batches.push(batch.commit()); batch = writeBatch(db); }
@@ -570,14 +598,13 @@ document.getElementById('adminSearchInput').addEventListener('input', (e) => {
 });
 
 // ----------------------------------------------------
-// 8. 🌟 ระบบพิมพ์รายงาน (A4)
+// 8. ระบบพิมพ์รายงาน (A4)
 // ----------------------------------------------------
 window.printReport = () => {
     if (filteredMembers.length === 0) return alert('ไม่มีข้อมูลสำหรับพิมพ์');
     
     const printWindow = window.open('', '_blank');
     
-    // สร้างหน้าต่าง HTML สำหรับพิมพ์
     let html = `
         <!DOCTYPE html>
         <html lang="th">
@@ -661,7 +688,7 @@ window.printReport = () => {
     `;
 
     filteredMembers.forEach(m => {
-        const stat = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.lastUpdate);
+        const stat = getMemberStatus(m.balance, m.ben1Status, m.ben2Status, m.ben3Status, m.ben4Status, m.ben5Status, m.ben6Status, m.lastUpdate);
         html += `
             <tr>
                 <td class="text-center">${m.memberId || m.id}</td>
@@ -691,10 +718,7 @@ window.printReport = () => {
     printWindow.document.close();
     printWindow.focus();
 
-    // รอให้โหลด CSS เสร็จค่อยสั่งพิมพ์
     setTimeout(() => {
         printWindow.print();
-        // ถ้าต้องการให้หน้าต่างปิดออโต้ ให้ลบ // หน้าบรรทัดล่างออก
-        // printWindow.close();
     }, 500);
 };
