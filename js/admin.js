@@ -11,7 +11,7 @@ let currentPage = 1;
 const rowsPerPage = 50; 
 
 // ----------------------------------------------------
-// ระบบ Login ผู้ดูแล
+// 1. ระบบ Login ผู้ดูแล
 // ----------------------------------------------------
 const loginOverlay = document.getElementById('loginOverlay');
 const adminContent = document.getElementById('adminContent');
@@ -47,7 +47,7 @@ window.logoutAdmin = () => {
 };
 
 // ----------------------------------------------------
-// ข้อมูลชุมชนที่ฝังอยู่ในระบบ
+// 2. ข้อมูลชุมชนที่ฝังอยู่ในระบบ
 // ----------------------------------------------------
 const communityData = {
     "0": ["พนักงานเทศบาล"],
@@ -76,7 +76,7 @@ function populateCommunities(zoneValue, selectedCommunity = "") {
 }
 
 // ----------------------------------------------------
-// ฟังก์ชันคำนวณสถานะสมาชิก (เงื่อนไขใหม่ 4 ระดับ + ระยะเวลา)
+// 3. ฟังก์ชันคำนวณสถานะสมาชิก (Real-time)
 // ----------------------------------------------------
 function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
     const bal = parseFloat(balance || 0);
@@ -86,12 +86,11 @@ function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
         return { text: "รับสิทธิ์ครบแล้ว", class: "bg-blue-100 text-blue-700 border-blue-400" };
     }
 
-    // คำนวณเดือนที่ผ่านไปจากการอัปเดตล่าสุด (ถ้าไม่มี ให้ถือว่าเป็นปัจจุบัน)
     const dateToUse = lastUpdate || new Date().toISOString();
     const lastDate = new Date(dateToUse);
     const now = new Date();
     const diffTime = Math.abs(now - lastDate);
-    const monthsPassed = diffTime / (1000 * 60 * 60 * 24 * 30.44); // แปลงเป็นเดือนโดยประมาณ
+    const monthsPassed = diffTime / (1000 * 60 * 60 * 24 * 30.44); 
 
     if (bal >= 300) {
         if (monthsPassed <= 6) {
@@ -99,7 +98,7 @@ function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
         } else {
             return { text: "ยอดเยี่ยม (ขาดอัปเดต)", class: "bg-emerald-50 text-emerald-600 border-emerald-300" };
         }
-    } else { // เงินไม่ถึง 300 บาท
+    } else { 
         if (monthsPassed > 6) {
             return { text: "สิ้นสภาพ", class: "bg-gray-200 text-gray-800 border-gray-500" };
         } else if (monthsPassed > 4) {
@@ -112,26 +111,200 @@ function getMemberStatus(balance, ben1, ben2, ben3, lastUpdate) {
     }
 }
 
+// ----------------------------------------------------
+// 4. 🔥 ระบบหักเงินฌาปนกิจแบบ Batch (รองรับสมาชิกหลักพัน)
+// ----------------------------------------------------
+window.processDeathDeduction = async () => {
+    const deceasedName = document.getElementById('deceasedName').value.trim();
+    const deceasedComm = document.getElementById('deceasedCommunity').value.trim();
+
+    if (!deceasedName || !deceasedComm) {
+        alert('กรุณากรอกชื่อผู้เสียชีวิตและชุมชน');
+        return;
+    }
+
+    const confirmMsg = `ยืนยันบันทึกการเสียชีวิตของ คุณ${deceasedName}\nและหักเงินสมาชิกทุกคนคนละ 20 บาท?`;
+    if (!confirm(confirmMsg)) return;
+
+    // UI elements สำหรับแจ้งเตือนสถานะ
+    const btn = document.getElementById('btnDeduction');
+    const btnText = document.getElementById('btnDeductionText');
+    const progressDiv = document.getElementById('deductionProgress');
+    const progressBar = document.getElementById('deductionProgressBar');
+    const statusText = document.getElementById('deductionStatusText');
+    const percentText = document.getElementById('deductionPercent');
+
+    try {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+        progressDiv.classList.remove('hidden');
+        statusText.innerText = "กำลังอ่านข้อมูลสมาชิกทั้งหมด...";
+
+        // ดึงข้อมูลสมาชิกทั้งหมด
+        const querySnapshot = await getDocs(collection(db, "members"));
+        const total = querySnapshot.size;
+        let processed = 0;
+        let batch = writeBatch(db);
+        let countInBatch = 0;
+        const currentTime = new Date().toISOString();
+
+        for (const docSnap of querySnapshot.docs) {
+            const data = docSnap.data();
+            const currentDed = parseFloat(data.deduction || 0);
+            const currentBal = parseFloat(data.balance || 0);
+
+            // อัปเดตเงินหัก และ เงินคงเหลือ
+            batch.update(docSnap.ref, {
+                deduction: currentDed + 20,
+                balance: currentBal - 20,
+                lastUpdate: currentTime // รีเซ็ตเวลา ให้ทุกคนมีสถานะล่าสุด
+            });
+
+            countInBatch++;
+            processed++;
+
+            // ส่งข้อมูลทุกๆ 400 คน (Firebase อัปเดตได้สูงสุด 500 ต่อครั้ง)
+            if (countInBatch >= 400) {
+                statusText.innerText = `กำลังบันทึกข้อมูล (${processed}/${total})...`;
+                await batch.commit();
+                
+                const percent = Math.round((processed / total) * 100);
+                progressBar.style.width = percent + '%';
+                percentText.innerText = percent + '%';
+
+                batch = writeBatch(db); // เริ่มชุดคำสั่งใหม่
+                countInBatch = 0;
+            }
+        }
+
+        // ประมวลผลกลุ่มสุดท้ายที่เหลือ
+        if (countInBatch > 0) {
+            await batch.commit();
+        }
+
+        progressBar.style.width = '100%';
+        percentText.innerText = '100%';
+        statusText.innerText = "ดำเนินการสำเร็จ!";
+        
+        alert(`หักเงินสมาชิกเรียบร้อยทั้งหมด ${total} รายการ\nยอดรวมหักครั้งนี้: ${(total * 20).toLocaleString()} บาท`);
+        
+        document.getElementById('deceasedName').value = '';
+        document.getElementById('deceasedCommunity').value = '';
+        fetchAdminMembers(); // รีโหลดข้อมูลตาราง
+
+    } catch (error) {
+        console.error("Error Deduction:", error);
+        alert('เกิดข้อผิดพลาด: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        btnText.innerText = "หักเงินสมาชิกทุกคน (20 บ./คน)";
+        setTimeout(() => progressDiv.classList.add('hidden'), 4000);
+    }
+};
+
+// ----------------------------------------------------
+// 5. โหลดข้อมูลตารางและคำนวณ Dashboard
+// ----------------------------------------------------
+async function fetchAdminMembers() {
+    tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-blue-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
+    try {
+        const querySnapshot = await getDocs(collection(db, "members"));
+        allMembers = [];
+        
+        if (querySnapshot.empty) {
+            tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-400">ยังไม่มีข้อมูลสมาชิก</td></tr>';
+            document.getElementById('adminPaginationControls').classList.add('hidden');
+            updateAdminDashboardSummary([]); 
+            return;
+        }
+
+        querySnapshot.forEach((docSnap) => {
+            allMembers.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        updateAdminDashboardSummary(allMembers);
+        filteredMembers = [...allMembers]; 
+        currentPage = 1;
+        displayAdminTable();
+
+    } catch (error) {
+        console.error("Error fetching data:", error);
+    }
+}
+
 function updateAdminDashboardSummary(members) {
     let totalBalance = 0;
     let activeCount = 0;
     let inactiveCount = 0;
 
     members.forEach(m => {
-        totalBalance += parseFloat(m.balance || 0);
-        // ถือว่าเงิน >= 300 คือผ่านเกณฑ์ในแง่สรุปตัวเลขภาพรวม
-        if (parseFloat(m.balance || 0) >= 300) activeCount++;
+        const bal = parseFloat(m.balance || 0);
+        totalBalance += bal;
+        // ถือว่าเงิน >= 300 คือผ่านเกณฑ์ภาพรวม
+        if (bal >= 300) activeCount++;
         else inactiveCount++;
     });
 
-    document.getElementById('adminTotalBalance').innerText = '฿' + totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('adminTotalBalance').innerText = '฿' + totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2});
     document.getElementById('adminTotalMembers').innerHTML = `${members.length.toLocaleString()} <span class="text-base font-normal">คน</span>`;
     document.getElementById('adminActive').innerText = activeCount.toLocaleString();
     document.getElementById('adminInactive').innerText = inactiveCount.toLocaleString();
 }
 
+function displayAdminTable() {
+    tableBody.innerHTML = '';
+    const totalItems = filteredMembers.length;
+    
+    if (totalItems === 0) {
+        tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-gray-400">ไม่พบข้อมูลที่ค้นหา</td></tr>';
+        document.getElementById('adminPaginationControls').classList.add('hidden');
+        return;
+    }
+
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const displayData = filteredMembers.slice(startIndex, endIndex);
+
+    let htmlString = '';
+    displayData.forEach(member => {
+        const statusObj = getMemberStatus(member.balance, member.ben1Status, member.ben2Status, member.ben3Status, member.lastUpdate);
+        const commText = member.community ? `${member.community}` : '-';
+
+        htmlString += `
+            <tr class="hover:bg-blue-50 transition-colors border-b border-gray-100">
+                <td class="p-3 font-mono text-[11px] text-gray-500">${member.memberId || member.id}</td>
+                <td class="p-3 font-bold text-gray-800">${member.name}</td>
+                <td class="p-3 text-blue-600 text-[11px]">${commText} <br>(ข.${member.zone || '-'})</td>
+                <td class="p-3 text-right text-green-600">${parseFloat(member.deposit || 0).toLocaleString()}</td>
+                <td class="p-3 text-right text-indigo-500 font-bold">${parseFloat(member.trashIncome || 0).toLocaleString()}</td>
+                <td class="p-3 text-right text-yellow-500">${parseFloat(member.trash6Months || 0).toLocaleString()}</td>
+                <td class="p-3 text-right text-red-500">${parseFloat(member.deduction || 0).toLocaleString()}</td>
+                <td class="p-3 text-right font-bold text-blue-700 bg-blue-50/50">฿${parseFloat(member.balance || 0).toLocaleString()}</td>
+                <td class="p-3 text-center">
+                    <span class="px-2 py-1 rounded-lg text-[10px] font-bold border ${statusObj.class}">${statusObj.text}</span>
+                </td>
+                <td class="p-3 text-center">
+                    <button onclick="openModal('edit', '${member.id}')" class="text-blue-500 hover:text-blue-800 font-bold underline text-xs">แก้ไข</button>
+                    <button onclick="deleteMember('${member.id}')" class="text-red-400 hover:text-red-700 font-bold underline text-xs ml-1">ลบ</button>
+                </td>
+            </tr>
+        `;
+    });
+
+    tableBody.innerHTML = htmlString;
+    document.getElementById('adminPaginationControls').classList.remove('hidden');
+    document.getElementById('adminPageInfo').innerText = `หน้า ${currentPage} จาก ${totalPages}`;
+}
+
+window.prevAdminPage = () => { if (currentPage > 1) { currentPage--; displayAdminTable(); } };
+window.nextAdminPage = () => { const totalPages = Math.ceil(filteredMembers.length / rowsPerPage); if (currentPage < totalPages) { currentPage++; displayAdminTable(); } };
+
 // ----------------------------------------------------
-// ระบบคำนวณเงินและอัปเดตหน้าจอ Modal แบบ Real-time
+// 6. ระบบฟอร์มแก้ไข (Modal)
 // ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
 const trashIncomeInput = document.getElementById('trashIncome'); 
@@ -149,33 +322,131 @@ function calculateBalance() {
     const currentBalance = (d + tAccum) - w - ded;
     balanceInput.value = currentBalance.toFixed(2); 
 
-    // ดึงค่าผู้รับสิทธิ์มาเช็คสถานะสดๆ ใน Modal (ยึดเวลาปัจจุบันเพราะกำลังจะอัปเดต)
     const ben1 = document.getElementById('ben1Status') ? document.getElementById('ben1Status').value : 'ยังไม่รับ';
     const ben2 = document.getElementById('ben2Status') ? document.getElementById('ben2Status').value : 'ยังไม่รับ';
     const ben3 = document.getElementById('ben3Status') ? document.getElementById('ben3Status').value : 'ยังไม่รับ';
     
-    // จำลองส่งเวลาปัจจุบันเข้าไปเพื่อดูสถานะ ณ วันที่จะบันทึก
-    const statusData = getMemberStatus(currentBalance, ben1, ben2, ben3, new Date().toISOString());
+    // แสดงสถานะจำลองก่อนเซฟลงฐานข้อมูล
+    const statusData = getMemberStatus(currentBalance, ben1, ben2, ben3, window._tempLastUpdate || new Date().toISOString());
 
     statusInput.value = statusData.text;
-    statusInput.className = `w-1/3 p-2 text-center border-2 rounded-lg font-bold ${statusData.class}`;
+    statusInput.className = `w-1/2 p-2 text-center border-2 rounded-lg font-bold ${statusData.class}`;
 }
 
-document.querySelectorAll('.calc-input').forEach(input => {
+document.querySelectorAll('.calc-input, select[id^="ben"]').forEach(input => {
     input.addEventListener('input', calculateBalance);
     input.addEventListener('change', calculateBalance);
 });
 
-// ฟังการเปลี่ยนสถานะผู้รับสิทธิ์เพื่อคำนวณใหม่
-['ben1Status', 'ben2Status', 'ben3Status'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) {
-        el.addEventListener('change', calculateBalance);
+window.openModal = (mode, id = null) => {
+    document.getElementById('formMode').value = mode;
+
+    if (mode === 'add') {
+        document.getElementById('modalTitle').innerText = 'เพิ่มสมาชิกใหม่';
+        memberForm.reset();
+        document.getElementById('memberId').readOnly = false;
+        document.getElementById('docId').value = '';
+        populateCommunities(""); 
+        
+        ['ben1Name', 'ben2Name', 'ben3Name', 'rec1Name', 'rec2Name', 'rec3Name'].forEach(field => {
+            if(document.getElementById(field)) document.getElementById(field).value = '';
+        });
+        ['ben1Status', 'ben2Status', 'ben3Status'].forEach(field => {
+            if(document.getElementById(field)) document.getElementById(field).value = 'ยังไม่รับ';
+        });
+
+        window._tempLastUpdate = new Date().toISOString();
+        calculateBalance(); 
+
+    } else if (mode === 'edit') {
+        document.getElementById('modalTitle').innerText = 'แก้ไขข้อมูลสมาชิก';
+        const member = allMembers.find(m => m.id === id);
+        if (member) {
+            document.getElementById('docId').value = id;
+            document.getElementById('memberId').value = member.memberId || id;
+            document.getElementById('memberId').readOnly = true;
+            document.getElementById('memberName').value = member.name;
+            document.getElementById('memberZone').value = member.zone || '';
+            populateCommunities(member.zone || '', member.community || '');
+            document.getElementById('joinDate').value = member.joinDate || '';
+            
+            document.getElementById('deposit').value = member.deposit || 0;
+            document.getElementById('trashIncome').value = member.trashIncome || 0;
+            document.getElementById('withdraw').value = member.withdraw || 0;
+            document.getElementById('deduction').value = member.deduction || 0;
+            document.getElementById('trash6Months').value = member.trash6Months || 0;
+
+            if(document.getElementById('ben1Name')) document.getElementById('ben1Name').value = member.ben1Name || '';
+            if(document.getElementById('ben1Status')) document.getElementById('ben1Status').value = member.ben1Status || 'ยังไม่รับ';
+            if(document.getElementById('ben2Name')) document.getElementById('ben2Name').value = member.ben2Name || '';
+            if(document.getElementById('ben2Status')) document.getElementById('ben2Status').value = member.ben2Status || 'ยังไม่รับ';
+            if(document.getElementById('ben3Name')) document.getElementById('ben3Name').value = member.ben3Name || '';
+            if(document.getElementById('ben3Status')) document.getElementById('ben3Status').value = member.ben3Status || 'ยังไม่รับ';
+            
+            if(document.getElementById('rec1Name')) document.getElementById('rec1Name').value = member.rec1Name || '';
+            if(document.getElementById('rec2Name')) document.getElementById('rec2Name').value = member.rec2Name || '';
+            if(document.getElementById('rec3Name')) document.getElementById('rec3Name').value = member.rec3Name || '';
+            
+            window._tempLastUpdate = member.lastUpdate; 
+            calculateBalance(); 
+        }
     }
+    memberModal.classList.remove('hidden');
+};
+
+window.closeModal = () => { memberModal.classList.add('hidden'); };
+
+memberForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const mode = document.getElementById('formMode').value;
+    const docId = document.getElementById('docId').value;
+    const mId = document.getElementById('memberId').value;
+    
+    calculateBalance();
+    const currentTime = new Date().toISOString();
+
+    const data = {
+        memberId: mId,
+        name: document.getElementById('memberName').value,
+        zone: document.getElementById('memberZone').value,
+        community: document.getElementById('memberCommunity').value,
+        joinDate: document.getElementById('joinDate').value,
+        deposit: parseFloat(document.getElementById('deposit').value) || 0,
+        trashIncome: parseFloat(document.getElementById('trashIncome').value) || 0, 
+        withdraw: parseFloat(document.getElementById('withdraw').value) || 0,
+        deduction: parseFloat(document.getElementById('deduction').value) || 0,
+        balance: parseFloat(document.getElementById('memberBalance').value) || 0, 
+        trash6Months: parseFloat(document.getElementById('trash6Months').value) || 0,
+        lastUpdate: currentTime 
+    };
+
+    if(document.getElementById('ben1Name')) {
+        data.ben1Name = document.getElementById('ben1Name').value.trim();
+        data.ben1Status = document.getElementById('ben1Status').value;
+        data.ben2Name = document.getElementById('ben2Name').value.trim();
+        data.ben2Status = document.getElementById('ben2Status').value;
+        data.ben3Name = document.getElementById('ben3Name').value.trim();
+        data.ben3Status = document.getElementById('ben3Status').value;
+        data.rec1Name = document.getElementById('rec1Name').value.trim();
+        data.rec2Name = document.getElementById('rec2Name').value.trim();
+        data.rec3Name = document.getElementById('rec3Name').value.trim();
+        
+        const evaluatedStatus = getMemberStatus(data.balance, data.ben1Status, data.ben2Status, data.ben3Status, currentTime);
+        data.status = evaluatedStatus.text; 
+    }
+
+    try {
+        if (mode === 'add') { await setDoc(doc(db, "members", mId), data); }
+        else if (mode === 'edit') { await updateDoc(doc(db, "members", docId), data); }
+        
+        closeModal();
+        alert('บันทึกข้อมูลสำเร็จ!');
+        fetchAdminMembers(); 
+    } catch (error) { alert('เกิดข้อผิดพลาด: ' + error.message); }
 });
 
 // ----------------------------------------------------
-// ระบบนำเข้าข้อมูล Excel (Upload Excel)
+// 7. ระบบอื่นๆ (นำเข้า, ส่งออก, ลบ, ค้นหา)
 // ----------------------------------------------------
 document.getElementById('excelUpload').addEventListener('change', function(e) {
     const file = e.target.files[0];
@@ -187,7 +458,7 @@ document.getElementById('excelUpload').addEventListener('change', function(e) {
         const workbook = XLSX.read(data, {type: 'array'});
         const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
-        if(confirm(`พบข้อมูลสมาชิกจำนวน ${json.length} รายการ ต้องการนำเข้าสู่ฐานข้อมูลหรือไม่?`)) {
+        if(confirm(`พบข้อมูลสมาชิกจำนวน ${json.length} รายการ นำเข้าสู่ระบบหรือไม่?`)) {
             await importExcelToFirebase(json);
         }
         document.getElementById('excelUpload').value = ''; 
@@ -196,7 +467,7 @@ document.getElementById('excelUpload').addEventListener('change', function(e) {
 });
 
 async function importExcelToFirebase(data) {
-    tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-indigo-600 font-bold animate-pulse text-lg">กำลังอัพโหลดข้อมูล...</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-indigo-600 font-bold animate-pulse text-lg">กำลังอัพโหลดข้อมูล...</td></tr>';
     let count = 0;
     let batches = [];
     let batch = writeBatch(db);
@@ -230,274 +501,28 @@ async function importExcelToFirebase(data) {
             ben1Status: 'ยังไม่รับ',
             ben2Status: 'ยังไม่รับ',
             ben3Status: 'ยังไม่รับ',
-            lastUpdate: currentTime // บันทึกเวลาอัปเดต
+            lastUpdate: currentTime
         };
 
         const docRef = doc(db, "members", mId);
         batch.set(docRef, memberData);
         count++;
 
-        if (count % 450 === 0) {
+        if (count % 400 === 0) {
             batches.push(batch.commit());
             batch = writeBatch(db);
         }
     }
     
-    if (count % 450 !== 0) batches.push(batch.commit());
+    if (count % 400 !== 0) batches.push(batch.commit());
     await Promise.all(batches);
     
     alert(`อัพโหลดและอัพเดทข้อมูลสำเร็จจำนวน ${count} รายการ!`);
     fetchAdminMembers();
 }
 
-window.deleteAllMembers = async () => {
-    if (confirm('⚠️ คำเตือน!\nคุณแน่ใจหรือไม่ที่จะลบข้อมูลทั้งหมด?')) {
-        const pass = prompt('พิมพ์คำว่า "ยืนยันการลบ" เพื่อดำเนินการต่อ');
-        if (pass !== 'ยืนยันการลบ') return alert('ยกเลิกการลบข้อมูล');
-
-        try {
-            tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-red-600 font-bold animate-pulse">กำลังลบข้อมูลทั้งหมด...</td></tr>';
-            const querySnapshot = await getDocs(collection(db, "members"));
-            
-            let batches = [];
-            let batch = writeBatch(db);
-            let count = 0;
-
-            querySnapshot.forEach((docSnap) => {
-                batch.delete(docSnap.ref);
-                count++;
-                if (count === 490) {
-                    batches.push(batch.commit());
-                    batch = writeBatch(db);
-                    count = 0;
-                }
-            });
-            if (count > 0) batches.push(batch.commit());
-            await Promise.all(batches);
-
-            alert('ลบข้อมูลเรียบร้อยแล้ว');
-            fetchAdminMembers();
-        } catch (error) {
-            alert('เกิดข้อผิดพลาดในการลบ: ' + error.message);
-        }
-    }
-};
-
-// ----------------------------------------------------
-// โหลดข้อมูลและแสดงผลในตาราง
-// ----------------------------------------------------
-async function fetchAdminMembers() {
-    tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-gray-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</td></tr>';
-    try {
-        const querySnapshot = await getDocs(collection(db, "members"));
-        allMembers = [];
-        
-        if (querySnapshot.empty) {
-            tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-gray-400">ยังไม่มีข้อมูลสมาชิก</td></tr>';
-            document.getElementById('adminPaginationControls').classList.add('hidden');
-            updateAdminDashboardSummary([]); 
-            return;
-        }
-
-        querySnapshot.forEach((docSnap) => {
-            allMembers.push({ id: docSnap.id, ...docSnap.data() });
-        });
-
-        updateAdminDashboardSummary(allMembers);
-        filteredMembers = [...allMembers]; 
-        currentPage = 1;
-        displayAdminTable();
-
-    } catch (error) {
-        console.error("Error fetching data:", error);
-    }
-}
-
-function displayAdminTable() {
-    tableBody.innerHTML = '';
-    const totalItems = filteredMembers.length;
-    
-    if (totalItems === 0) {
-        tableBody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-gray-400">ไม่พบข้อมูลที่ค้นหา</td></tr>';
-        document.getElementById('adminPaginationControls').classList.add('hidden');
-        return;
-    }
-
-    const totalPages = Math.ceil(totalItems / rowsPerPage);
-    if (currentPage > totalPages) currentPage = totalPages;
-
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const displayData = filteredMembers.slice(startIndex, endIndex);
-
-    let htmlString = '';
-    displayData.forEach(member => {
-        // ประเมินสถานะของสมาชิกแต่ละคน
-        const statusObj = getMemberStatus(member.balance, member.ben1Status, member.ben2Status, member.ben3Status, member.lastUpdate);
-        const commText = member.community ? `${member.community}` : '-';
-
-        htmlString += `
-            <tr class="hover:bg-blue-50 transition-colors border-b border-gray-100">
-                <td class="p-3 font-mono text-gray-600">${member.memberId || member.id}</td>
-                <td class="p-3 font-bold text-gray-800">${member.name}</td>
-                <td class="p-3 text-blue-600 text-xs">${commText} (ข.${member.zone || '-'})</td>
-                <td class="p-3 text-right text-green-600">${parseFloat(member.deposit || 0).toLocaleString()}</td>
-                <td class="p-3 text-right text-indigo-600 font-bold">${parseFloat(member.trashIncome || 0).toLocaleString()}</td>
-                <td class="p-3 text-right text-yellow-600">${parseFloat(member.trash6Months || 0).toLocaleString()}</td>
-                <td class="p-3 text-right font-bold text-blue-700 bg-blue-50/50">฿${parseFloat(member.balance || 0).toLocaleString()}</td>
-                <td class="p-3 text-center">
-                    <span class="px-3 py-1 rounded-full text-[11px] font-bold border ${statusObj.class}">${statusObj.text}</span>
-                </td>
-                <td class="p-3 text-center space-x-2">
-                    <button onclick="openModal('edit', '${member.id}')" class="text-blue-500 hover:text-blue-800 font-bold underline text-sm">แก้ไข</button>
-                    <button onclick="deleteMember('${member.id}')" class="text-red-400 hover:text-red-700 font-bold underline text-sm">ลบ</button>
-                </td>
-            </tr>
-        `;
-    });
-
-    tableBody.innerHTML = htmlString;
-    document.getElementById('adminPaginationControls').classList.remove('hidden');
-    document.getElementById('adminPageInfo').innerText = `หน้า ${currentPage} จาก ${totalPages}`;
-}
-
-window.prevAdminPage = () => {
-    if (currentPage > 1) { currentPage--; displayAdminTable(); }
-};
-
-window.nextAdminPage = () => {
-    const totalPages = Math.ceil(filteredMembers.length / rowsPerPage);
-    if (currentPage < totalPages) { currentPage++; displayAdminTable(); }
-};
-
-// ----------------------------------------------------
-// จัดการหน้าต่าง Form (Modal)
-// ----------------------------------------------------
-window.openModal = (mode, id = null) => {
-    document.getElementById('formMode').value = mode;
-
-    if (mode === 'add') {
-        document.getElementById('modalTitle').innerText = 'เพิ่มสมาชิกใหม่';
-        memberForm.reset();
-        document.getElementById('memberId').readOnly = false;
-        document.getElementById('docId').value = '';
-        populateCommunities(""); 
-        
-        document.getElementById('trash6Months').value = 0;
-
-        ['ben1Name', 'ben2Name', 'ben3Name', 'rec1Name', 'rec2Name', 'rec3Name'].forEach(field => {
-            if(document.getElementById(field)) document.getElementById(field).value = '';
-        });
-        ['ben1Status', 'ben2Status', 'ben3Status'].forEach(field => {
-            if(document.getElementById(field)) document.getElementById(field).value = 'ยังไม่รับ';
-        });
-
-        calculateBalance(); 
-    } else if (mode === 'edit') {
-        document.getElementById('modalTitle').innerText = 'แก้ไขข้อมูลสมาชิก';
-        const member = allMembers.find(m => m.id === id);
-        if (member) {
-            document.getElementById('docId').value = id;
-            document.getElementById('memberId').value = member.memberId || id;
-            document.getElementById('memberId').readOnly = true;
-            document.getElementById('memberName').value = member.name;
-            document.getElementById('memberZone').value = member.zone || '';
-            populateCommunities(member.zone || '', member.community || '');
-            document.getElementById('joinDate').value = member.joinDate || '';
-            
-            document.getElementById('deposit').value = member.deposit || 0;
-            document.getElementById('trashIncome').value = member.trashIncome || 0;
-            document.getElementById('withdraw').value = member.withdraw || 0;
-            document.getElementById('deduction').value = member.deduction || 0;
-            document.getElementById('trash6Months').value = member.trash6Months || 0;
-
-            if(document.getElementById('ben1Name')) document.getElementById('ben1Name').value = member.ben1Name || '';
-            if(document.getElementById('ben1Status')) document.getElementById('ben1Status').value = member.ben1Status || 'ยังไม่รับ';
-            if(document.getElementById('ben2Name')) document.getElementById('ben2Name').value = member.ben2Name || '';
-            if(document.getElementById('ben2Status')) document.getElementById('ben2Status').value = member.ben2Status || 'ยังไม่รับ';
-            if(document.getElementById('ben3Name')) document.getElementById('ben3Name').value = member.ben3Name || '';
-            if(document.getElementById('ben3Status')) document.getElementById('ben3Status').value = member.ben3Status || 'ยังไม่รับ';
-            
-            if(document.getElementById('rec1Name')) document.getElementById('rec1Name').value = member.rec1Name || '';
-            if(document.getElementById('rec2Name')) document.getElementById('rec2Name').value = member.rec2Name || '';
-            if(document.getElementById('rec3Name')) document.getElementById('rec3Name').value = member.rec3Name || '';
-            
-            // ส่งเวลาที่มีอยู่ในระบบ (เพื่อแสดงสถานะตอนที่ยังไม่ได้บันทึกแก้ไข)
-            window._tempLastUpdate = member.lastUpdate; 
-            calculateBalance(); 
-        }
-    }
-    memberModal.classList.remove('hidden');
-};
-
-window.closeModal = () => { memberModal.classList.add('hidden'); };
-
-// ----------------------------------------------------
-// บันทึกข้อมูล (อัปเดต LastUpdate ด้วย)
-// ----------------------------------------------------
-memberForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const mode = document.getElementById('formMode').value;
-    const docId = document.getElementById('docId').value;
-    const mId = document.getElementById('memberId').value;
-    
-    calculateBalance();
-    
-    // กำหนดเวลาปัจจุบันที่กดบันทึก
-    const currentTime = new Date().toISOString();
-
-    const data = {
-        memberId: mId,
-        name: document.getElementById('memberName').value,
-        zone: document.getElementById('memberZone').value,
-        community: document.getElementById('memberCommunity').value,
-        joinDate: document.getElementById('joinDate').value,
-        deposit: parseFloat(document.getElementById('deposit').value) || 0,
-        trashIncome: parseFloat(document.getElementById('trashIncome').value) || 0, 
-        withdraw: parseFloat(document.getElementById('withdraw').value) || 0,
-        deduction: parseFloat(document.getElementById('deduction').value) || 0,
-        balance: parseFloat(document.getElementById('memberBalance').value) || 0, 
-        trash6Months: parseFloat(document.getElementById('trash6Months').value) || 0,
-        
-        lastUpdate: currentTime // << บันทึกเวลาที่อัปเดตล่าสุด
-    };
-
-    // เก็บฟิลด์ผู้รับสิทธิ์ (ถ้ามีใน HTML)
-    if(document.getElementById('ben1Name')) {
-        data.ben1Name = document.getElementById('ben1Name').value.trim();
-        data.ben1Status = document.getElementById('ben1Status').value;
-        data.ben2Name = document.getElementById('ben2Name').value.trim();
-        data.ben2Status = document.getElementById('ben2Status').value;
-        data.ben3Name = document.getElementById('ben3Name').value.trim();
-        data.ben3Status = document.getElementById('ben3Status').value;
-        data.rec1Name = document.getElementById('rec1Name').value.trim();
-        data.rec2Name = document.getElementById('rec2Name').value.trim();
-        data.rec3Name = document.getElementById('rec3Name').value.trim();
-        
-        // ประเมิน Status ก่อนลงฐานข้อมูล (ใช้เวลาปัจจุบันที่เพิ่งกดบันทึก)
-        const evaluatedStatus = getMemberStatus(data.balance, data.ben1Status, data.ben2Status, data.ben3Status, currentTime);
-        data.status = evaluatedStatus.text; 
-    }
-
-    try {
-        if (mode === 'add') { await setDoc(doc(db, "members", mId), data); }
-        else if (mode === 'edit') { await updateDoc(doc(db, "members", docId), data); }
-        
-        closeModal();
-        alert('บันทึกข้อมูลและอัปเดตสถานะล่าสุดเรียบร้อยแล้ว!');
-        fetchAdminMembers(); 
-    } catch (error) { alert('เกิดข้อผิดพลาด: ' + error.message); }
-});
-
-// ----------------------------------------------------
-// ระบบส่งออกข้อมูล (Export to Excel)
-// ----------------------------------------------------
 window.exportToExcel = () => {
-    if (allMembers.length === 0) {
-        alert('ไม่มีข้อมูลสมาชิกในระบบสำหรับส่งออกครับ');
-        return;
-    }
-
+    if (allMembers.length === 0) return alert('ไม่มีข้อมูลสำหรับส่งออก');
     alert('กำลังเตรียมไฟล์ Excel กรุณารอสักครู่...');
 
     const exportData = filteredMembers.map(m => {
@@ -528,29 +553,40 @@ window.exportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "ข้อมูลสมาชิก");
-
-    const dateStr = new Date().toLocaleDateString('th-TH').replace(/\//g, '-');
-    const fileName = `ข้อมูลสมาชิก_${dateStr}.xlsx`;
-
-    XLSX.writeFile(workbook, fileName);
+    XLSX.writeFile(workbook, `ข้อมูลสมาชิก_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.xlsx`);
 };
 
-// ----------------------------------------------------
-// ระบบลบสมาชิก
-// ----------------------------------------------------
-window.deleteMember = async (id) => {
-    if (confirm('ยืนยันการลบสมาชิกรายนี้?')) {
-        try { 
-            await deleteDoc(doc(db, "members", id)); 
-            fetchAdminMembers(); 
-        }
-        catch (error) { alert('ลบไม่สำเร็จ: ' + error.message); }
+window.deleteAllMembers = async () => {
+    if (confirm('⚠️ คำเตือน!\nคุณแน่ใจหรือไม่ที่จะลบข้อมูลทั้งหมด?')) {
+        const pass = prompt('พิมพ์คำว่า "ยืนยันการลบ" เพื่อดำเนินการต่อ');
+        if (pass !== 'ยืนยันการลบ') return alert('ยกเลิกการลบข้อมูล');
+
+        try {
+            tableBody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-red-600 font-bold animate-pulse">กำลังลบข้อมูลทั้งหมด...</td></tr>';
+            const querySnapshot = await getDocs(collection(db, "members"));
+            
+            let batches = [];
+            let batch = writeBatch(db);
+            let count = 0;
+
+            querySnapshot.forEach((docSnap) => {
+                batch.delete(docSnap.ref);
+                count++;
+                if (count === 400) {
+                    batches.push(batch.commit());
+                    batch = writeBatch(db);
+                    count = 0;
+                }
+            });
+            if (count > 0) batches.push(batch.commit());
+            await Promise.all(batches);
+
+            alert('ลบข้อมูลเรียบร้อยแล้ว');
+            fetchAdminMembers();
+        } catch (error) { alert('เกิดข้อผิดพลาดในการลบ: ' + error.message); }
     }
 };
 
-// ----------------------------------------------------
-// ระบบค้นหาสมาชิก (Search)
-// ----------------------------------------------------
 document.getElementById('adminSearchInput').addEventListener('input', (e) => {
     const term = e.target.value.trim().toLowerCase();
     if (term === '') {
