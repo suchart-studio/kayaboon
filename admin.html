@@ -94,6 +94,25 @@
                         <div id="deductionProgressBar" class="progress-animate bg-red-600 h-3 rounded-full" style="width: 0%"></div>
                     </div>
                 </div>
+
+                <div class="mt-8 border-t border-red-100 pt-6">
+                    <h4 class="font-bold text-gray-800 mb-3 flex items-center"><span class="text-lg mr-2">📋</span> ประวัติรายการหักเงินฌาปนกิจ (ผู้เสียชีวิต)</h4>
+                    <div class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-600 border-b">
+                                <tr>
+                                    <th class="p-3">วันที่บันทึก</th>
+                                    <th class="p-3">ชื่อผู้เสียชีวิต</th>
+                                    <th class="p-3">ชุมชน</th>
+                                    <th class="p-3 text-right">ยอดที่หักรวม (บาท)</th>
+                                    <th class="p-3 text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deceasedTable" class="divide-y divide-gray-100 bg-white">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <div class="mb-4">
@@ -125,6 +144,28 @@
                 <button onclick="prevAdminPage()" class="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg font-bold transition shadow-sm">⬅️ ก่อนหน้า</button>
                 <span id="adminPageInfo" class="text-sm font-bold text-blue-700 bg-blue-100 px-4 py-2 rounded-lg">หน้า 1 / 1</span>
                 <button onclick="nextAdminPage()" class="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg font-bold transition shadow-sm">ถัดไป ➡️</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="deceasedModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-60 flex items-center justify-center p-4 z-[250] backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
+            <h2 class="text-xl font-bold mb-4 border-b pb-3 text-gray-800">แก้ไขข้อมูลผู้เสียชีวิต</h2>
+            <input type="hidden" id="editDeceasedId">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">ชื่อ-สกุล ผู้เสียชีวิต</label>
+                    <input type="text" id="editDeceasedName" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">ชุมชน</label>
+                    <input type="text" id="editDeceasedCommunity" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+            </div>
+            <p class="text-xs text-red-500 mt-4">*การแก้ไขหรือลบที่นี่ จะแก้ไขแค่ในตารางประวัติเท่านั้น จะไม่ไปดึงเงิน 20 บาทคืนจากสมาชิก</p>
+            <div class="flex space-x-3 mt-4">
+                <button onclick="document.getElementById('deceasedModal').classList.add('hidden')" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-300">ยกเลิก</button>
+                <button onclick="saveDeceasedEdit()" class="flex-1 bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 shadow-md">บันทึกการแก้ไข</button>
             </div>
         </div>
     </div>
