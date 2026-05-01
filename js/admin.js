@@ -385,10 +385,11 @@ window.prevAdminPage = () => { if (currentPage > 1) { currentPage--; displayAdmi
 window.nextAdminPage = () => { const totalPages = Math.ceil(filteredMembers.length / rowsPerPage); if (currentPage < totalPages) { currentPage++; displayAdminTable(); } };
 
 // ----------------------------------------------------
-// 6. 🌟 ระบบฟอร์มแก้ไขสมาชิก (Modal) - จัดการวันที่ฝากเงิน
+// 6. 🌟 ระบบฟอร์มแก้ไขสมาชิก (คำนวณยอด 2 ช่อง)
 // ----------------------------------------------------
 const depositInput = document.getElementById('deposit');
-const depositDateInput = document.getElementById('depositDate'); // ดึงฟิลด์วันที่ฝาก
+const newDepositInput = document.getElementById('newDeposit'); // เพิ่มช่องฝากใหม่
+const depositDateInput = document.getElementById('depositDate'); 
 const trashIncomeInput = document.getElementById('trashIncome'); 
 const withdrawInput = document.getElementById('withdraw');
 const deductionInput = document.getElementById('deduction');
@@ -397,10 +398,13 @@ const statusInput = document.getElementById('memberStatus');
 
 function calculateBalance() {
     const d = parseFloat(depositInput.value) || 0;
+    const nd = parseFloat(newDepositInput.value) || 0; // ยอดฝากใหม่
     const tAccum = parseFloat(trashIncomeInput.value) || 0;
     const w = parseFloat(withdrawInput.value) || 0;
     const ded = parseFloat(deductionInput.value) || 0;
-    const currentBalance = (d + tAccum) - w - ded;
+    
+    // เงินคงเหลือ = (ฝากเดิม + ฝากใหม่ + ขยะสะสม) - ถอน - หัก
+    const currentBalance = (d + nd + tAccum) - w - ded;
     balanceInput.value = currentBalance.toFixed(2); 
 
     const ben1 = document.getElementById('ben1Status') ? document.getElementById('ben1Status').value : 'ยังไม่รับ';
@@ -424,7 +428,10 @@ window.openModal = (mode, id = null) => {
         memberForm.reset();
         document.getElementById('memberId').readOnly = false;
         document.getElementById('docId').value = '';
-        depositDateInput.value = ''; // เคลียร์วันที่ฝากให้ว่าง
+        
+        depositInput.value = 0;
+        newDepositInput.value = '';
+        depositDateInput.value = ''; 
         populateCommunities(""); 
         
         ['ben1Name', 'ben2Name', 'ben3Name', 'rec1Name', 'rec2Name', 'rec3Name'].forEach(field => {
@@ -449,7 +456,9 @@ window.openModal = (mode, id = null) => {
             document.getElementById('joinDate').value = member.joinDate || '';
             
             document.getElementById('deposit').value = member.deposit || 0;
+            newDepositInput.value = ''; // ว่างไว้เสมอเผื่อจะกรอกยอดเพิ่มใหม่
             depositDateInput.value = member.depositDate || ''; // โหลดวันที่ฝากมาแสดง
+            
             document.getElementById('trashIncome').value = member.trashIncome || 0;
             document.getElementById('withdraw').value = member.withdraw || 0;
             document.getElementById('deduction').value = member.deduction || 0;
@@ -481,6 +490,11 @@ memberForm.addEventListener('submit', async (e) => {
     const docId = document.getElementById('docId').value;
     const mId = document.getElementById('memberId').value;
     
+    // คำนวณยอดเงินฝากรวม (ฝากเดิม + ฝากใหม่)
+    const d = parseFloat(document.getElementById('deposit').value) || 0;
+    const nd = parseFloat(document.getElementById('newDeposit').value) || 0;
+    const finalDeposit = d + nd;
+
     calculateBalance();
     const currentTime = new Date().toISOString();
 
@@ -490,7 +504,7 @@ memberForm.addEventListener('submit', async (e) => {
         zone: document.getElementById('memberZone').value,
         community: document.getElementById('memberCommunity').value,
         joinDate: document.getElementById('joinDate').value,
-        deposit: parseFloat(document.getElementById('deposit').value) || 0,
+        deposit: finalDeposit, // บันทึกยอดที่บวกกันเรียบร้อยแล้ว
         depositDate: depositDateInput.value || '', // เซฟวันที่ฝาก
         trashIncome: parseFloat(document.getElementById('trashIncome').value) || 0, 
         withdraw: parseFloat(document.getElementById('withdraw').value) || 0,
@@ -557,7 +571,6 @@ async function importExcelToFirebase(data) {
         const t6m = parseFloat(row['ขายขยะใน 6 เดือน'] || row['ขยะ 6 เดือน'] || 0);
         const mId = String(row['เลขสมาชิก'] || row['รหัสสมาชิก'] || (Date.now() + count));
 
-        // รองรับวันที่ฝากจาก Excel ด้วย (ถ้ามีคอลัมน์ "วันที่ฝากล่าสุด")
         let depDate = '';
         if (row['วันที่ฝากล่าสุด']) {
             depDate = row['วันที่ฝากล่าสุด'];
