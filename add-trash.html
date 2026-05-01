@@ -113,6 +113,42 @@
         </div>
     </div>
 
+    <script>
+        function checkTrashPassword() {
+            const pass = document.getElementById('trashPassword').value;
+            if (pass === '987654321') {
+                sessionStorage.setItem('trashAuth', 'true');
+                document.getElementById('loginOverlay').classList.add('hidden');
+                document.getElementById('trashContent').classList.remove('hidden');
+                
+                // สั่งให้ระบบฐานข้อมูลเริ่มทำงาน
+                if (typeof window.initFirebaseSystem === 'function') {
+                    window.initFirebaseSystem();
+                }
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+
+        function logoutTrash() {
+            sessionStorage.removeItem('trashAuth');
+            location.reload();
+        }
+
+        // ตรวจสอบสถานะการล็อกอินทุกครั้งที่เปิดหน้า
+        document.addEventListener("DOMContentLoaded", () => {
+            if (sessionStorage.getItem('trashAuth') === 'true') {
+                document.getElementById('loginOverlay').classList.add('hidden');
+                document.getElementById('trashContent').classList.remove('hidden');
+            }
+
+            // รองรับการกดปุ่ม Enter
+            document.getElementById('trashPassword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') checkTrashPassword();
+            });
+        });
+    </script>
+
     <script type="module" src="./js/add-trash.js"></script>
 </body>
 </html>
